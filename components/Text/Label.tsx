@@ -15,11 +15,13 @@ const Label = (props: LabelProps) => (
   <Text
     style={
       {
-        fontFamily: props.font,
+        fontFamily: props.font ?? 'Wolf Sans',
         fontSize: props.size ?? 16,
         color: props.color ?? Constants.Colors.Text.primary,
         fontWeight: props.weight ?? 'normal',
-        fontStyle: props.style ?? 'normal',
+        fontStyle: typeof props.style !== 'string' ? 'normal' : (
+          props.style ?? 'normal'
+        ),
         textAlign: props.align
       }
     }
@@ -29,3 +31,4 @@ const Label = (props: LabelProps) => (
 )
 
 export default Label
+export { LabelProps }

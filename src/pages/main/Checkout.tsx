@@ -1,34 +1,145 @@
-import { UserAppData } from 'app-types/src/app'
-import { NativeAppEventEmitter, View, Image, ScrollView } from 'react-native'
+import { PageProps, UserAppData } from 'app-types/src/app'
+import { NativeAppEventEmitter, View, Image, ScrollView, ActivityIndicator } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Display, Text } from '../../../components'
-import { App, Constants, Items, Merchant } from 'app-types'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faAngleDown, faLocationDot, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { Address, App, Constants, Items, Merchant, Orders } from 'app-types'
+import { faMapMarkerAlt, faMinus, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { useCallback, useState } from 'react'
 import { useFocusEffect } from '@react-navigation/native'
 import { Http } from 'app-structs'
+import { useNavigation } from '@react-navigation/native'
+import useStateRef from 'react-usestateref'
+import { Http as HttpType } from 'app-types'
 
 const http = new Http.Client()
 
-const CheckoutPage = (user: UserAppData) => {
-  const [items, setItems] = useState<Items.Item[]>(undefined),
-    [merchants, setMerchants] = useState<Record<string, Merchant.MerchantData>>(undefined)
+const CheckoutPage = (user: UserAppData & PageProps) => {
+  const { address } = (user.route.params ?? {}) as { address?: Address.AddressData }
 
-  const calculateTotalPrice = (cart: Map<string, App.CartData>) => {
-    const checked = [] // array of checked items
-    let total = 0
+  const [items, setItems, itemsRef] = useStateRef<Items.Item[]>(undefined),
+    [merchants, setMerchants] = useState<Record<string, Merchant.MerchantData>>(undefined),
+    [totalPrice, setTotalPrice] = useState<number>(0),
+    [currentAddress, setCurrentAddress, currentAddressRef] = useStateRef<Address.AddressData>(address),
+    [
+      [error, message],
+      setResult
+    ] = useState([false, '']),
+    navigation = useNavigation()
 
-    for (const item of (items ?? [] as Items.Item[])) {
-      const cartItem = cart.get(item.uid)
-      if (!checked.includes(item.uid) && cartItem) {
-        total += cartItem.quantity * item.price
-        checked.push(item.uid)
+  const convertItemsToCheckout = async () => {
+      const orderData: HttpType.OrderData[] = []
+      // loop through each item and then get cart data
+      for (const item of itemsRef.current) {
+        const cartData = user.cart.get(item.uid)
+        if (!cartData) continue
+        
+        orderData.push(
+          {
+            item: item.uid,
+            merchant: item.merchant,
+            quantity: cartData.quantity
+          }
+        )
+      }
+
+      return orderData
+    },
+    calculateTotalPrice = (cart: Map<string, App.CartData>) => {
+      const checked = [] // array of checked items
+      let total = 0
+
+      for (const item of (items ?? [] as Items.Item[])) {
+        const cartItem = cart.get(item.uid)
+        if (!checked.includes(item.uid) && cartItem) {
+          total += cartItem.quantity * item.price
+          checked.push(item.uid)
+        }
+      }
+
+      return total
+    },
+    pressContinue = async () => {
+      setResult([false, ''])
+      if (typeof totalPrice !== 'number') return;
+
+      if (totalPrice <= 0)
+        return setResult(
+          [
+            true,
+            'Price is set to 0, make sure to add items to your cart.'
+          ]
+        );
+
+      if (!currentAddress)
+        return setResult(
+          [
+            true,
+            'Please make sure to set the location of delivery.'
+          ]
+        )
+
+      // send request
+      const result = await http.request<Orders.Order>(
+          {
+            method: 'post',
+            url: Constants.Url.Routes.ORDERS,
+            data: {
+              data: await convertItemsToCheckout(),
+              address: currentAddressRef.current.uid
+            },
+            headers: {
+              Authorization: user.token
+            }
+          }
+        )
+
+      if (result.value) { // get merchant
+        const merchant = await http.request<Merchant.MerchantData>(
+          {
+            method: 'get',
+            url: Constants.Url.Routes.MERCHANT(result.value.merchant),
+            headers: {
+              Authorization: user.token
+            }
+          }
+        )
+
+        console.log(result.value, merchant.value)
+        if (!merchant.value) return; // should rarely happen
+
+        (navigation.navigate as any)(
+          'ChoosePayment',
+          {
+            address: currentAddress,
+            items,
+            merchant: merchant.value,
+            order: result.value
+          }
+        )
       }
     }
 
-    return total
-  }
+  useFocusEffect(
+    useCallback(
+      () => {
+        if (!Array.isArray(items) || !user.cart) return
+  
+        setTotalPrice(
+          calculateTotalPrice(user.cart)
+        )
+      },
+      [user.cart, items]
+    )
+  )
+
+  useFocusEffect(
+    useCallback(
+      () => {
+        setCurrentAddress(address ?? null)
+      },
+      [address]
+    )
+  )
 
   useFocusEffect(
     useCallback(
@@ -98,7 +209,8 @@ const CheckoutPage = (user: UserAppData) => {
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            gap: 4
           }
         }
       >
@@ -120,24 +232,38 @@ const CheckoutPage = (user: UserAppData) => {
             }
           }
         >
-          <FontAwesomeIcon
-            icon={faLocationDot}
-            color={Constants.Colors.Layout.main}
-          />
+          <Display.Button
+            icon={faMapMarkerAlt}
+            text={
+              {
+                content: currentAddress !== undefined ? (
+                    (
+                      () => {                        
+                        if (!currentAddressRef.current)
+                          return 'No location set'
 
-          <Text.Label
-            color={Constants.Colors.Text.tertiary}
-            size={14}
-          >
-            {
-              'Lot 19, Blk 6 Casoy Street. Gordon Heights, Olongapo City, Zambales'.substring(0, 42) +
-                '...'
+                        const addressText = [currentAddress.landmark ?? '', currentAddress.text]
+                          .join(' ')
+                          .trim()
+
+                        return addressText.length > 40 ?
+                          addressText.substring(0, 40) + '...' :
+                          addressText
+                      }
+                    )()
+                  ) : (
+                    'No address selected' 
+                  ),
+                size: 14,
+                color: Constants.Colors.Text.tertiary
+              }
             }
-          </Text.Label>
-
-          <FontAwesomeIcon
-            icon={faAngleDown}
-            color={Constants.Colors.Text.secondary}
+            paddingHorizontal={0}
+            paddingVertical={0}
+            bg='transparent'
+            onPress={
+              () => (navigation.navigate as any)('ChooseAddress')
+            }
           />
         </View>
       </View>
@@ -146,87 +272,81 @@ const CheckoutPage = (user: UserAppData) => {
         style={
           {
             display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            paddingHorizontal: 32,
-            borderBottomWidth: 1,
-            paddingVertical: 8,
-            borderBottomColor: 'lightgrey'
+            flexDirection: 'column',
+            paddingHorizontal: 32
           }
         }
       >
         <Text.Header
+          weight='bold'
+          size={28}
           color={Constants.Colors.Text.tertiary}
-          font='Highman'
-          size={36}
         >
-          MY CART
+          Here's your cart
         </Text.Header>
 
         <Text.Label
-          size={14}
           color={Constants.Colors.Text.secondary}
-        >
-          {user.cart.size.toString()} product{user.cart.size === 1 ? '' : 's'}
-        </Text.Label>
-      </View>
-
-      <View
-        style={
-          {
-            display: 'flex',
-            flexDirection: 'column',
-            justifyContent: 'space-between',
-            flexGrow: 1
-          }
-        }
-      >
-        <ScrollView
-          contentContainerStyle={
-            {
-              display: 'flex',
-              flexDirection: 'column',
-              paddingHorizontal: 32,
-              gap: 32,
-              paddingVertical: 8
-            }
-          }
+          size={14}
+          style='italic'
         >
           {
             items && merchants ? (
-              items.map(
-                (item, idx) => (
+              user.cart.size + ' item' + (user.cart.size === 1 ? '' : 's')
+            ) : (
+              'Loading...'
+            )
+          }
+        </Text.Label>
+      </View>
+
+      <ScrollView
+        style={
+          {
+            display: 'flex',
+            flexDirection: 'row',
+            paddingHorizontal: 28
+          }
+        }
+      >
+        {
+          items && merchants ? (
+            items.map(
+              (item, idx) => {
+                const itemInCart = user.cart.get(item.uid)
+                if (!itemInCart || itemInCart.quantity < 1) return null
+
+                return (
                   <View
+                    key={idx}
                     style={
                       {
-                        display: 'flex',
-                        flexDirection: 'row',
-                        justifyContent: 'space-between'
+                        elevation: 4,
+                        margin: 4,
+                        backgroundColor: Constants.Colors.Text.alt,
+                        paddingHorizontal: 16,
+                        paddingVertical: 8,
+                        borderRadius: 10
                       }
                     }
-                    key={idx}
                   >
                     <View
                       style={
                         {
                           display: 'flex',
-                          flexDirection: 'row',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                          alignItems: 'center',
                           gap: 8
                         }
                       }
                     >
                       <Image
                         source={
-                          { uri: item.image ?? '' }
+                          { uri: item.image }
                         }
                         style={
-                          {
-                            width: 64,
-                            height: 64,
-                            resizeMode: 'contain',
-                            borderRadius: 10
-                          }
+                          { width: 64, height: 64 }
                         }
                       />
   
@@ -239,97 +359,99 @@ const CheckoutPage = (user: UserAppData) => {
                         }
                       >
                         <Text.Label
-                          weight='bold'
                           color={Constants.Colors.Text.tertiary}
                         >
                           {item.name}
                         </Text.Label>
   
                         <Text.Label
+                          size={10}
+                          font='monospace'
                           color={Constants.Colors.Text.secondary}
-                          style='italic'
-                          size={14}
                         >
-                          {merchants[item.merchant]?.name ?? 'No Merchant'}
+                          ₱{item.price.toFixed(2)}
                         </Text.Label>
                       </View>
-                    </View>
-  
-                    <View
-                      style={
-                        {
-                          display: 'flex',
-                          flexDirection: 'column',
-                          alignItems: 'flex-end',
-                          justifyContent: 'space-between'
-                        }
-                      }
-                    >
-                      <Text.Label
-                        color={Constants.Colors.Text.green}
-                        weight='bold'
-                        size={14}
-                      >
-                        ₱{item.price.toFixed(2)}
-                      </Text.Label>
   
                       <View
                         style={
                           {
                             display: 'flex',
                             flexDirection: 'row',
-                            alignItems: 'center',
-                            gap: 8
+                            justifyContent: 'center',
+                            alignItems: 'center'
                           }
                         }
                       >
                         <Display.Button
-                          bg={Constants.Colors.Layout.primary}
-                          style={{ elevation: 4, paddingHorizontal: 8, paddingVertical: 8 }}
                           onPress={
-                            () => NativeAppEventEmitter.emit('remove-cart', item.uid)
+                            () => NativeAppEventEmitter.emit('remove-cart', '1')
+                          }
+                          icon={faMinus}
+                          paddingHorizontal={8}
+                          paddingVertical={4}
+                          style={
+                            {
+                              borderTopRightRadius: 0,
+                              borderBottomRightRadius: 0
+                            }
+                          }
+                          bg={Constants.Colors.All.lightBlue}
+                        />
+  
+                        <View
+                          style={
+                            { padding: 8 }
                           }
                         >
-                          <FontAwesomeIcon
-                            icon={faMinus}
-                            color={Constants.Colors.Text.main}
-                          />
-                        </Display.Button>
-  
-                        <Text.Label>
-                          {user.cart.get(item.uid).quantity.toString()}
-                        </Text.Label>
+                          <Text.Label
+                            color={Constants.Colors.Text.tertiary}
+                            size={14}
+                          >
+                            {itemInCart.quantity.toLocaleString()}
+                          </Text.Label>
+                        </View>
   
                         <Display.Button
-                          bg={Constants.Colors.Layout.primary}
-                          style={{ elevation: 4, paddingHorizontal: 8, paddingVertical: 8 }}
                           onPress={
-                            () => NativeAppEventEmitter.emit('add-cart', item.uid)
+                            () => NativeAppEventEmitter.emit('add-cart', '1')
                           }
-                        >
-                          <FontAwesomeIcon
-                            icon={faPlus}
-                            color={Constants.Colors.Text.main}
-                          />
-                        </Display.Button>
+                          icon={faPlus}
+                          paddingHorizontal={8}
+                          paddingVertical={4}
+                          style={
+                            {
+                              borderTopLeftRadius: 0,
+                              borderBottomLeftRadius: 0
+                            }
+                          }
+                          bg={Constants.Colors.All.lightBlue}
+                        />
                       </View>
                     </View>
                   </View>
                 )
-              )
-            ) : null
-          }
-        </ScrollView>
+              }
+            )
+          ) : null
+        }
+      </ScrollView>
 
+      <View
+        style={
+          {
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between'
+          }
+        }
+      >
         <View
           style={
             {
               display: 'flex',
               flexDirection: 'column',
               padding: 32,
-              backgroundColor: Constants.Colors.All.whiteSmoke,
-              borderTopWidth: 1,
-              borderTopColor: 'lightgrey',
               gap: 16
             }
           }
@@ -345,41 +467,73 @@ const CheckoutPage = (user: UserAppData) => {
             }
           >
             <Text.Label
-              font='Century Gothic Bold'
               color={Constants.Colors.Text.secondary}
-              size={14}
+              size={16}
             >
-              Your Total
+              Your Total (excluding fees)
             </Text.Label>
 
-            <Text.Label
-              font='Century Gothic Bold'
-              color={Constants.Colors.Text.green}
-              size={18}
-            >
-              ₱{calculateTotalPrice(user.cart).toFixed(2)}
-            </Text.Label>
+            {
+              typeof totalPrice === 'number' ? (
+                <Text.Label
+                  font='monospace'
+                  color={Constants.Colors.Text.green}
+                  size={14}
+                >
+                  ₱{totalPrice.toFixed(2)}
+                </Text.Label>
+              ) : (
+                <ActivityIndicator />
+              )
+            }
           </View>
 
-          <Display.Button
+          <View
             style={
               {
-                borderRadius: 10,
-                paddingHorizontal: 32,
-                paddingVertical: 14
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                gap: 8,
+                width: '100%'
               }
             }
-            bg={Constants.Colors.All.main}
           >
-            <Text.Label
-              color={Constants.Colors.Text.alt}
-              weight='bold'
-              align='center'
-              size={14}
-            >
-              Checkout
-            </Text.Label>
-          </Display.Button>
+            <Display.Button
+              inverted={
+                { color: Constants.Colors.All.lightBlue }
+              }
+              onPress={pressContinue}
+              text={
+                {
+                  content: typeof totalPrice === 'number' ?
+                    'Continue' : (
+                    <ActivityIndicator
+                      color='white'
+                    />
+                  )
+                }
+              }
+              style={{ width: '100%' }}
+            />
+
+            {
+              message ? (
+                <Text.Label
+                  color={
+                    error ?
+                      Constants.Colors.Text.danger :
+                      Constants.Colors.Text.green
+                  }
+                  size={14}
+                  align='center'
+                >
+                  {message}
+                </Text.Label>
+              ) : null
+            }
+          </View>
         </View>
       </View>
     </SafeAreaView>

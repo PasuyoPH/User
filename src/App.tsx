@@ -4,14 +4,24 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { Http } from 'app-structs'
 import { NativeAppEventEmitter } from 'react-native'
 import { NavigationContainer } from '@react-navigation/native'
-import { LoginPageData, MainPageData } from './PageData'
+import { DeliverPageData, LoginPageData, MainPageData } from './PageData'
 import { useFonts } from 'expo-font'
 import { StatusBar } from 'expo-status-bar'
 import useState from 'react-usestateref'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
+import * as Linking from 'expo-linking'
+import { PortalProvider } from '@gorhom/portal'
+import * as Location from 'expo-location'
+import Constants from 'expo-constants'
+import { AppModes, CartData } from 'app-types/src/app'
+import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
+
+Location.setGoogleApiKey(Constants.expoConfig.android.config.googleMaps.apiKey)
 
 const http = new Http.Client(),
-  NativeStack = createNativeStackNavigator()
+  NativeStack = createNativeStackNavigator(),
+  BottomTabStack = createBottomTabNavigator()
 
 function App() {
   const [user, setUser] = useState<Types.App.UserAppData>(
@@ -21,18 +31,20 @@ function App() {
         cart: new Map()
       }
     ),
+    [appMode, setAppMode] = useState(AppModes.BILI),
     [fontsLoaded] = useFonts(
       {
         'Century Gothic': require('../assets/fonts/Century-Gothic.ttf'),
         'Century Gothic Bold': require('../assets/fonts/Century-Gothic-Bold.ttf'),
         'Roboto Condensed Italic': require('../assets/fonts/RobotoCondensed-Italic.ttf'),
         'Roboto Condensed Bold': require('../assets/fonts/RobotoCondensed-Bold.ttf'),
-        'Highman': require('../assets/fonts/Highman.ttf')
+        'Highman': require('../assets/fonts/Highman.ttf'),
+        'Wolf Sans': require('../assets/fonts/Wolf-Sans-Regular.ttf')
       }
-    )
+    ),
+    url = Linking.useURL()
   
   const fetchUserData = async (token: string) => {
-    console.log('[INFO]: Fetching account data with token:', token)
     const res = await http.request<Types.Account.UserAccountData>(
       {
         method: 'get',
@@ -74,17 +86,11 @@ function App() {
 
   useEffect(
     () => {
-      console.log('[INFO]: Initial load.')
-      console.log('[INFO]: Running App:init()')
 
-      const init = async () => {
-        console.log('[INFO]: Fetching user token from storage.')
-        
-        if (user.token && user.data) return console.log('[INFO]: User already logged in. Nothing to do.')
+      const init = async () => {        
+        if (user.token && user.data) return
 
         const token = await AsyncStorage.getItem('token') ?? undefined
-        console.log('[INFO]: AsyncStorage.getItem(\'token\') returned:', token)
-
         if (!token)
           return setUser(
             (latestUser) => (
@@ -121,12 +127,47 @@ function App() {
       )
 
       NativeAppEventEmitter.addListener(
+        'set-cart',
+        (cart: Map<string, CartData>) => {
+          console.log('Set Cart')
+
+          setUser(
+            (latestUser) => (
+              {
+                ...latestUser,
+                cart
+              }
+            )
+          )
+        }
+      )
+
+      NativeAppEventEmitter.addListener(
+        'cart-clear',
+        () => {
+          const cart = new Map(user.cart)
+          cart.clear()
+
+          setUser(
+            (latestUser) => (
+              {
+                ...latestUser,
+                cart
+              }
+            )
+          )
+        }
+      )
+
+      NativeAppEventEmitter.addListener(
         'remove-cart',
         (uid: string) => {
           const cart = new Map(user.cart),
             data = cart.get(uid)
 
-          if (data.quantity > 0) {
+          if (data.quantity <= 1)
+            cart.delete(uid)
+          else {
             data.quantity--
             cart.set(uid, data)
           }
@@ -162,9 +203,13 @@ function App() {
         }
       )
 
+      NativeAppEventEmitter.addListener(
+        'switch-mode',
+        (mode: AppModes) => setAppMode(mode)
+      )
+
       return () => {
         NativeAppEventEmitter.removeAllListeners()        
-        console.log('[INFO]: App:unmount()')
       }
     },
     []
@@ -203,53 +248,125 @@ function App() {
     }
 
     case Types.App.AppState.LOGGED_IN: {
-      return (
-        <NavigationContainer>
-          <NativeStack.Navigator  
-            screenOptions={
-              {
-                headerStyle: { backgroundColor: Types.Constants.Colors.Layout.secondary },
-                contentStyle: {
-                  backgroundColor: Types.Constants.Colors.All.whiteSmoke
+      switch (appMode) {
+        case AppModes.DELIVER: {
+          return (
+            <NavigationContainer>
+              <BottomTabStack.Navigator  
+                screenOptions={
+                  { headerStyle: { backgroundColor: Types.Constants.Colors.Layout.secondary } }
                 }
-              }
-            }
-          >
-            {
-              MainPageData.map(
-                (page, idx) => (
-                  <NativeStack.Screen
-                    key={idx}
-                    name={page.name}
-                    options={
-                      {
-                        headerShown: !page.hideHeader,
-                        animation: page.animation
-                      }
-                    }
-                  >
-                    {
-                      (props) => (
-                        <>
-                          <StatusBar
-                            style={page.statusBarColor ?? 'dark'}
-                          />
+                sceneContainerStyle={
+                  { backgroundColor: Types.Constants.Colors.All.whiteSmoke }
+                }
+                tabBar={() => null}
+                backBehavior='history'
+              >
+                {
+                  DeliverPageData.map(
+                    (page, idx) => (
+                      <BottomTabStack.Screen
+                        key={idx}
+                        name={page.name}
+                        options={
+                          {
+                            headerShown: !page.hideHeader,
+                            unmountOnBlur: page.unmount ?? true
+                          }
+                        }
+                      >
+                        {
+                          (props) => (
+                            <>
+                              <StatusBar
+                                style={page.statusBarColor ?? 'dark'}
+                              />
+                                <PortalProvider>
+                                  <Animated.View
+                                    entering={FadeIn}
+                                    exiting={FadeOut}
+                                    style={{ flexGrow: 1 }}
+                                  >
+                                    <page.component
+                                      {...user}
+                                      {...props}
+                                      modifyData={setUser}
+                                    />
+                                  </Animated.View>
+                                </PortalProvider>   
+                            </>
+                          )
+                        }
+                      </BottomTabStack.Screen>
+                    )
+                  )
+                }
+              </BottomTabStack.Navigator>
+            </NavigationContainer>
+          )
+        }
 
-                          <page.component
-                            {...user}
-                            {...props}
-                            modifyData={setUser}
-                          />
-                        </>
-                      )
-                    }
-                  </NativeStack.Screen>
-                )
-              )
-            }
-          </NativeStack.Navigator>
-        </NavigationContainer>
-      )
+        case AppModes.BILI: {
+          return (
+            <NavigationContainer>
+              <BottomTabStack.Navigator  
+                screenOptions={
+                  { headerStyle: { backgroundColor: Types.Constants.Colors.Layout.secondary } }
+                }
+                sceneContainerStyle={
+                  { backgroundColor: Types.Constants.Colors.All.whiteSmoke }
+                }
+                tabBar={() => null}
+                backBehavior='history'
+              >
+                {
+                  MainPageData.map(
+                    (page, idx) => (
+                      <BottomTabStack.Screen
+                        key={idx}
+                        name={page.name}
+                        options={
+                          {
+                            headerShown: !page.hideHeader,
+                            unmountOnBlur: page.unmount ?? true
+                          }
+                        }
+                      >
+                        {
+                          (props) => (
+                            <>
+                              <StatusBar
+                                style={page.statusBarColor ?? 'dark'}
+                              />
+                                <PortalProvider>
+                                  <Animated.View
+                                    entering={FadeIn}
+                                    exiting={FadeOut}
+                                    style={{ flexGrow: 1 }}
+                                  >
+                                    <page.component
+                                      {...user}
+                                      {...props}
+                                      modifyData={setUser}
+                                    />
+                                  </Animated.View>
+                                </PortalProvider>   
+                            </>
+                          )
+                        }
+                      </BottomTabStack.Screen>
+                    )
+                  )
+                }
+              </BottomTabStack.Navigator>
+            </NavigationContainer>
+          )
+        }
+
+        default: {
+          return null
+        }
+      }
     }
 
     default: {

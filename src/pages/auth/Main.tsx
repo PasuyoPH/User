@@ -153,9 +153,10 @@ const MainPage = () => {
                   (navigation.navigate as any)('Login')
                 }
               }
-            >
-              Proceed to Login
-            </Display.Button>
+              text={
+                { content: 'Proceed to Login' }
+              }
+            />
           </SafeAreaView>
         </ScrollView>
       </View>

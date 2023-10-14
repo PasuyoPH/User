@@ -1,120 +1,233 @@
-import * as Types from 'app-types'
-import { View, Pressable } from 'react-native'
-import { Text } from '../../../components'
+import { App, Constants } from 'app-types'
+import { Display, Form, Text } from '../../../components'
+import { View } from 'react-native'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faAngleRight } from '@fortawesome/free-solid-svg-icons'
+import { faAngleLeft, faBox, faCreditCard, faMapMarkerAlt, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import * as Display from '../../../components/Display'
-import { faWallet, faCog } from '@fortawesome/free-solid-svg-icons'
+import { useNavigation } from '@react-navigation/native'
 
-const SettingsPage = (rider: Types.App.RiderAppData) => {
+// todo: use get stats to get credits + orders
+
+const ProfilePage = (user: App.UserAppData) => {
+  const navigation = useNavigation()
+
   return (
     <SafeAreaView
       style={
         {
           display: 'flex',
           flexDirection: 'column',
-          backgroundColor: Types.Constants.Colors.Layout.main,
-          flexGrow: 1
+          paddingHorizontal: 36
         }
       }
     >
-      { /* Profile Section */ }
-      <Pressable
-        onPress={
-          () => console.log('aaa')
-        }
+      <Display.Button
+        icon={faAngleLeft}
+      />
+      
+      { /* Header section */ }
+      <View
         style={
           {
             display: 'flex',
-            flexDirection: 'row',
-            gap: 12,
-            marginVertical: 16,
-            paddingVertical: 16,
-            paddingHorizontal: 32
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 4,
+            borderBottomWidth: .5,
+            borderColor: 'lightgrey',
+            paddingVertical: 32
           }
         }
-        android_ripple={
-          { color: '#5B81B3' }
-        }
       >
-        { /* This should be profile pic */ }
+        <Text.Label
+          size={22}
+          weight='bold'
+        >
+          {user.data.fullName}
+        </Text.Label>
+
         <View
           style={
             {
-              backgroundColor: Types.Constants.Colors.Layout.primary,
-              width: 76,
-              height: 76,
-              borderRadius: 100
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              gap: 8
             }
           }
-        />
+        >
+          <Display.FloatingCard
+            style={
+              {
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 0,
+                gap: 4,
+                elevation: 0,
+                borderColor: 'lightgrey',
+                borderWidth: .5,
+                paddingHorizontal: 16,
+                paddingVertical: 4
+              }
+            }
+            color={Constants.Colors.All.whiteSmoke}
+            radius={100}
+          >
+            <FontAwesomeIcon
+              icon={faBox}
+              color={Constants.Colors.All.brown}
+            />
+
+            <Text.Label
+              size={10}
+              font='monospace'
+            >
+              0 orders
+            </Text.Label>
+          </Display.FloatingCard>
+
+          <Display.FloatingCard
+            style={
+              {
+                display: 'flex',
+                flexDirection: 'row',
+                justifyContent: 'center',
+                alignItems: 'center',
+                padding: 0,
+                gap: 4,
+                elevation: 0,
+                borderColor: 'lightgrey',
+                borderWidth: .5,
+                paddingHorizontal: 16
+              }
+            }
+            color={Constants.Colors.All.whiteSmoke}
+            radius={100}
+          >
+            <FontAwesomeIcon
+              icon={faCreditCard}
+              color={Constants.Colors.Text.gold}
+            />
+
+            <Text.Label
+              size={10}
+              font='monospace'
+            >
+              ₱ 0.00
+            </Text.Label>
+          </Display.FloatingCard>
+        </View>
+      </View>
+
+      { /* main body */ }
+      <View
+        style={
+          {
+            display: 'flex',
+            flexDirection: 'column',
+            paddingVertical: 24,
+            gap: 22
+          }
+        }
+      >
+        <View
+          style={
+            {
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 4
+            }
+          }
+        >
+          <Text.Label
+            color={Constants.Colors.Text.primary}
+          >
+            Email Address
+          </Text.Label>
+
+          <Form.Input
+            placeholder='Email Address'
+            value={user.data.email}
+          />
+        </View>
 
         <View
           style={
             {
               display: 'flex',
               flexDirection: 'column',
-              justifyContent: 'center',
-              flex: 1,
-              gap: 8
+              gap: 4
             }
           }
         >
           <Text.Label
-            weight='bold'
-            size={18}
-            color={Types.Constants.Colors.Text.alt}
+            color={Constants.Colors.Text.primary}
           >
-            Alexander Jose Montoya
+            Phone Number
           </Text.Label>
 
-          <Text.Label
-            color={Types.Constants.Colors.Text.alt}
-            size={14}
-            style='italic'
-          >
-            +63{rider.data.phone.slice(1)}
-          </Text.Label>
-        </View>
-
-        <View
-          style={
-            { alignSelf: 'center' }
-          }
-        >
-          <FontAwesomeIcon
-            icon={faAngleRight}
-            color={Types.Constants.Colors.Text.alt}
+          <Form.Input
+            placeholder='9XXXXXXXXX'
+            left={'+63'}
+            value={user.data.phone.slice(1)}
+            numberOnly
           />
         </View>
-      </Pressable>
-
-      <Display.Divider />
+      </View>
 
       <View
         style={
           {
             display: 'flex',
             flexDirection: 'column',
-            paddingTop: 16
+            paddingVertical: 22,
+            gap: 8
           }
         }
       >
-        <Display.SettingsItem
-          label='Wallet'
-          to='Wallet'
-          icon={faWallet}
+        <Display.Button
+          bg={Constants.Colors.All.lightBlue}
+          onPress={
+            () => (navigation.navigate as any)('Addresses')
+          }
+          icon={faMapMarkerAlt}
+          text={
+            {
+              content: 'My Addresses'
+            }
+          }
         />
-        
-        <Display.SettingsItem
-          label='Settings'
-          to='Settings'
-          icon={faCog}
+
+        <Display.Button
+          bg='transparent'
+          style={
+            {
+              display: 'flex',
+              flexDirection: 'row',
+              justifyContent: 'center',
+              alignItems: 'center',
+              gap: 8,
+              borderRadius: 16,
+              padding: 0,
+              paddingHorizontal: 16,
+              paddingVertical: 12,
+              borderColor: Constants.Colors.Text.danger,
+              borderWidth: 1
+            }
+          }
+          inverted={
+            { color: Constants.Colors.Text.danger }
+          }
+          text={
+            { content: 'Delete Account' }
+          }
+          icon={faTrash}
         />
       </View>
     </SafeAreaView>
   )
 }
 
-export default SettingsPage
+export default ProfilePage

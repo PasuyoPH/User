@@ -1,4 +1,4 @@
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { Http } from 'app-structs'
 import { App, Constants, Items, Merchant } from 'app-types'
 import { UserAppData } from 'app-types/src/app'
@@ -6,46 +6,77 @@ import { useCallback, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image, Pressable, View } from 'react-native'
 import { Display, Text } from '../../../components'
-import { FloatingCard } from '../../../components/Display'
 import { StatusBar } from 'expo-status-bar'
+import { colorIsLight } from '../../../components/Display'
+import { faAngleLeft } from '@fortawesome/free-solid-svg-icons'
+import { faHeart } from '@fortawesome/free-regular-svg-icons'
+import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons'
+import useStateRef from 'react-usestateref'
 
-const http = new Http.Client(),
-  hexIsLight = (color: string) => {
-    const hex = color.replace('#', '');
-    const c_r = parseInt(hex.substring(0, 0 + 2), 16);
-    const c_g = parseInt(hex.substring(2, 2 + 2), 16);
-    const c_b = parseInt(hex.substring(4, 4 + 2), 16);
-    const brightness = ((c_r * 299) + (c_g * 587) + (c_b * 114)) / 1000;
-    return brightness > 155;
-  }
+const http = new Http.Client()
 
 const ViewItemPage = (props: App.PageProps & UserAppData) => {
   const { uid = '?' } = props.route.params as { uid: string },
     [data, setData] = useState<{ item: Items.Item, merchant: Merchant.MerchantData }>(),
     [accent, setAccent] = useState<string>(Constants.Colors.Layout.main),
-    [isInCart, setIsInCart] = useState(false)
+    [isInCart, setIsInCart] = useState(false),
+    [liked, setLiked, likedRef] = useStateRef(false),
+    navigation = useNavigation()
+
+  const likeItem = async () => {
+    setLiked(!likedRef.current)
+
+    await http.request<Items.Likes>(
+      {
+        method: 'post',
+        url: Constants.Url.Routes.ITEM_LIKE(uid),
+        data: {
+          remove: !likedRef.current
+        },
+        headers: {
+          Authorization: props.token
+        }
+      }
+    )
+  }
 
   useFocusEffect(
     useCallback(
       () => {
         const getItemData = async () => {
-          const res = await http.request<{ item: Items.Item, merchant: Merchant.MerchantData }>(
-            {
-              method: 'get',
-              url: Constants.Url.Routes.ITEM(uid),
-              headers: {
-                Authorization: props.token
+            const res = await http.request<{ item: Items.Item, merchant: Merchant.MerchantData }>(
+              {
+                method: 'get',
+                url: Constants.Url.Routes.ITEM(uid),
+                headers: {
+                  Authorization: props.token
+                }
               }
-            }
-          )
+            )
 
-          setData(res.value)
-          
-          if (res.value) {
-            if (res.value.merchant.accent) setAccent(res.value.merchant.accent)
-            if (props.cart.has(res.value.item.uid)) setIsInCart(true)
+            setData(res.value)
+            
+            if (res.value) {
+              if (res.value.merchant.accent) setAccent(res.value.merchant.accent)
+              if (props.cart.has(res.value.item.uid)) setIsInCart(true)
+            }
+          },
+          getLikedItem = async () => {
+            const res = await http.request<Items.Likes>(
+              {
+                method: 'get',
+                url: Constants.Url.Routes.ITEM_LIKE(uid),
+                headers: {
+                  Authorization: props.token
+                }
+              }
+            )
+
+            setLiked(!!res.value)
           }
-        }
+
+        getLikedItem()
+          .catch(console.error)
 
         getItemData()
           .catch(console.error)
@@ -58,11 +89,44 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
     <>
       <StatusBar
         style={
-          hexIsLight(accent) ?
+          colorIsLight(accent) ?
             'dark' :
             'light'
         }
       />
+
+      <Pressable
+        style={
+          {
+            flexDirection: 'row',
+            position: 'absolute',
+            marginVertical: 32,
+            zIndex: 2,
+            padding: 32
+          }
+        }
+        onPress={
+          () => (navigation.navigate as any)('Home')
+        }
+      >
+        <Display.Button
+          icon={faAngleLeft}
+          bg='transparent'
+          text={
+            {
+              color: colorIsLight(accent) ?
+                Constants.Colors.Text.tertiary :
+                Constants.Colors.Text.alt
+            }
+          }
+          paddingHorizontal={0}
+          paddingVertical={0}
+          onPress={
+            () => (navigation.navigate as any)('Home')
+          }
+          iconSize={18}
+        />
+      </Pressable>
 
       <SafeAreaView
         style={
@@ -124,13 +188,37 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
               }
             }
           >
-            <Text.Header
-              weight='bold'
-              color={Constants.Colors.Text.tertiary}
-              size={24}
+            <View
+              style={
+                {
+                  display: 'flex',
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 8
+                }
+              }
             >
-              {data.item.name}
-            </Text.Header>
+              <Text.Header
+                weight='bold'
+                color={Constants.Colors.Text.tertiary}
+                size={24}
+              >
+                {data.item.name}
+              </Text.Header>
+
+              <Display.Button
+                icon={
+                  liked ?
+                    faHeartSolid :
+                    faHeart
+                }
+                bg='transparent'
+                paddingHorizontal={0}
+                paddingVertical={0}
+                text={{ color: Constants.Colors.Text.danger }}
+                onPress={likeItem}
+              />
+            </View>
 
             <Text.Label
               style='italic'
@@ -207,27 +295,27 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 </View>
               </View>
 
-              <View
-                style={
+              <Display.Button
+                bg={accent}
+                text={
                   {
-                    backgroundColor: accent,
-                    borderRadius: 20,
-                    paddingHorizontal: 24,
-                    paddingVertical: 8
+                    content: 'Visit',
+                    color: colorIsLight(accent) ?
+                      Constants.Colors.Text.tertiary :
+                      Constants.Colors.Text.alt,
+                    size: 14
                   }
                 }
-              >
-                <Text.Label
-                  weight='bold'
-                  color={
-                    hexIsLight(accent) ?
-                      Constants.Colors.Text.tertiary :
-                      Constants.Colors.Text.alt
-                  }
-                >
-                  Visit
-                </Text.Label>
-              </View>
+                paddingHorizontal={20}
+                paddingVertical={8}
+                borderRadius={24}
+                onPress={
+                  () => (navigation.navigate as any)(
+                    'ViewMerchant',
+                    { uid: data.merchant.uid }
+                  )
+                }
+              />
             </View>
 
             <Display.Divider
@@ -276,8 +364,7 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 >
                   <Text.Label
                     color={Constants.Colors.Text.tertiary}
-                    font='Century Gothic Bold'
-                    size={18}
+                    font='Wolf Sans'
                   >
                     Price
                   </Text.Label>
@@ -296,18 +383,7 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
               </View>
 
               <View>
-                <Pressable
-                  style={
-                    {
-                      display: 'flex',
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      backgroundColor: data.merchant.accent ?? Constants.Colors.All.main,
-                      borderRadius: 24,
-                      paddingHorizontal: 24,
-                      paddingVertical: 10
-                    }
-                  }
+                <Display.Button
                   onPress={
                     () => {
                       setIsInCart(!isInCart)
@@ -316,24 +392,17 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                       else props.cart.set(data.item.uid, { quantity: 1 })
                     }
                   }
-                >
-                  <Text.Label
-                    weight='bold'
-                    color={
-                      hexIsLight(accent) ?
-                        Constants.Colors.Text.tertiary :
-                        Constants.Colors.Text.alt
-                    }
-                    align='center' 
-                    size={16}
-                  >
+                  bg={accent}
+                  text={
                     {
-                      isInCart ?
+                      content: isInCart ?
                         'Remove from Cart' :
-                        'Add to Cart'
+                        'Add to Cart',
+                      size: 14
                     }
-                  </Text.Label>
-                </Pressable>
+                  }
+                  borderRadius={24}
+                />
               </View>
             </View>
           </View>

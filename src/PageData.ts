@@ -2,11 +2,22 @@ import { App, Constants } from 'app-types'
 import LoginPage from './pages/auth/Login'
 import HomePage from './pages/main/Home'
 import ProfilePage from './pages/main/Profile'
-import { faHeart, faHouse, faUserCircle } from '@fortawesome/free-solid-svg-icons'
+import { faHouse } from '@fortawesome/free-solid-svg-icons'
 import ViewItemPage from './pages/main/ViewItem'
 import ViewMerchantPage from './pages/main/ViewMerchant'
 import CheckoutPage from './pages/main/Checkout'
 import MainPage from './pages/auth/Main'
+import ChoosePaymentMethodPage from './pages/payment/ChoosePaymentMethod'
+import AddressesPage from './pages/address/Addresses'
+import NewAddressPage from './pages/address/NewAddress'
+import ChooseAddressPage from './pages/address/ChooseAddress'
+import ProcessedPage from './pages/payment/Processed'
+import SearchItemPage from './pages/main/SearchItem'
+import ViewLikedPage from './pages/main/ViewLiked'
+import DeliveryHomePage from './pages/delivery/Home'
+import NewDeliveryPage from './pages/delivery/NewDelivery'
+import DeliveryCheckoutPage from './pages/delivery/Checkout'
+import ConfirmDelivery from './pages/delivery/ConfirmDelivery'
 
 const LoginPageData: App.PageItem[] = [
     {
@@ -16,6 +27,70 @@ const LoginPageData: App.PageItem[] = [
     {
       component: LoginPage,
       name: 'Login'
+    }
+  ],
+  DeliverPageData: App.PageItem[] = [
+    {
+      component: DeliveryHomePage,
+      name: 'Home',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ConfirmDelivery,
+      name: 'Confirm',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: DeliveryCheckoutPage,
+      name: 'Checkout',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: NewDeliveryPage,
+      name: 'NewDelivery',
+      hideHeader: true,
+      statusBarColor: 'dark',
+    },
+
+    // Default pages
+    {
+      component: AddressesPage,
+      name: 'Addresses',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: NewAddressPage,
+      name: 'NewAddress',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ChooseAddressPage,
+      name: 'ChooseAddress',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+    {
+      component: ProfilePage,
+      name: 'Profile',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ProcessedPage,
+      name: 'Processed',
+      hideHeader: true,
+      statusBarColor: 'dark'
     }
   ],
   MainPageData: App.PageItem[] = [
@@ -65,8 +140,9 @@ const LoginPageData: App.PageItem[] = [
     },
 
     {
-      component: null,
+      component: SearchItemPage,
       name: 'Search',
+      hideHeader: true
       /*nav: {
         icon: faSearch,
         to: 'Search',
@@ -77,19 +153,57 @@ const LoginPageData: App.PageItem[] = [
     },
 
     {
-      component: null,
-      name: 'Favourites'
+      component: ViewLikedPage,
+      name: 'Favourites',
+      hideHeader: true,
+      statusBarColor: 'dark'
     },
 
     {
       component: ProfilePage,
       name: 'Profile',
       hideHeader: true,
-      statusBarColor: 'light'
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ChoosePaymentMethodPage,
+      name: 'ChoosePayment',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: AddressesPage,
+      name: 'Addresses',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: NewAddressPage,
+      name: 'NewAddress',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ChooseAddressPage,
+      name: 'ChooseAddress',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ProcessedPage,
+      name: 'Processed',
+      hideHeader: true,
+      statusBarColor: 'dark'
     }
   ]
 
 export {
   LoginPageData,
-  MainPageData
+  MainPageData,
+  DeliverPageData
 }

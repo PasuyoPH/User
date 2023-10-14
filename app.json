@@ -14,6 +14,7 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "pasuyo",
     "ios": {
       "supportsTablet": true
     },
@@ -25,7 +26,7 @@
       "useNextNotificationsApi": true,
       "config": {
         "googleMaps": {
-          "apiKey": "AIzaSyCzEhb7M7ILYTsHj7rU5yO7pxqODzSUCQs"
+          "apiKey": "AIzaSyAe1O4RsaElYL79mHnPSHRGL_lVCf9uP0M"
         }
       },
       "permissions": [
@@ -49,7 +50,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "f7cb4501-03ab-433e-858f-0a7c36bf80f3"
+        "projectId": "b3720b45-da69-40ad-b9ec-586f70f02c91"
       }
     }
   }
