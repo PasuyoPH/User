@@ -2,6 +2,7 @@ import { Address, App, Constants, Deliveries, Items, Merchant, Orders } from 'ap
 import { View } from 'react-native'
 import * as Text from '../Text'
 import { useEffect, useState } from 'react'
+import * as Time from '../Time'
 
 interface ConfirmOrderCardProps {
   order: Orders.Order
@@ -127,8 +128,7 @@ const ConfirmOrderCard = (props: ConfirmOrderCardProps) => {
         style={
           {
             display: 'flex',
-            flexDirection: 'row',
-            justifyContent: 'space-between'
+            flexDirection: 'column'
           }
         }
       >
@@ -178,7 +178,7 @@ const ConfirmOrderCard = (props: ConfirmOrderCardProps) => {
             size={14}
             color={Constants.Colors.Text.tertiary}
           >
-            {props.order.eta?.toFixed(2) ?? '0'} seconds
+            {Time.secondsToTime(props.order.eta ?? 0)}
           </Text.Label>
         </View>
 
@@ -196,7 +196,7 @@ const ConfirmOrderCard = (props: ConfirmOrderCardProps) => {
             color={Constants.Colors.Text.secondary}
             font='normal'
           >
-            FEE
+            TOTAL
           </Text.Header>
 
           <Text.Label

@@ -9,6 +9,7 @@ import colorIsLight from './ColorIsLight'
 import Map from './Map'
 import Modal from './Modal'
 import Header from './Header'
+import useSnackbar, { SnackbarTypes } from './Snackbar'
 
 export {
   Button,
@@ -21,5 +22,7 @@ export {
   colorIsLight,
   Map,
   Modal,
-  Header
+  Header,
+  useSnackbar,
+  SnackbarTypes
 }

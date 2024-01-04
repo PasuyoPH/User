@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Image, Pressable, View } from 'react-native'
 import { Display, Text } from '../../../components'
 import { StatusBar } from 'expo-status-bar'
-import { colorIsLight } from '../../../components/Display'
+import { SnackbarTypes, colorIsLight } from '../../../components/Display'
 import { faAngleLeft } from '@fortawesome/free-solid-svg-icons'
 import { faHeart } from '@fortawesome/free-regular-svg-icons'
 import { faHeart as faHeartSolid } from '@fortawesome/free-solid-svg-icons'
@@ -21,7 +21,8 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
     [accent, setAccent] = useState<string>(Constants.Colors.Layout.main),
     [isInCart, setIsInCart] = useState(false),
     [liked, setLiked, likedRef] = useStateRef(false),
-    navigation = useNavigation()
+    navigation = useNavigation(),
+    [addToSnackbar, snackbarContent] = Display.useSnackbar()
 
   const likeItem = async () => {
     setLiked(!likedRef.current)
@@ -198,13 +199,17 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 }
               }
             >
-              <Text.Header
-                weight='bold'
-                color={Constants.Colors.Text.tertiary}
-                size={24}
+              <View
+                style={{ flexBasis: '90%' }}
               >
-                {data.item.name}
-              </Text.Header>
+                <Text.Header
+                  weight='bold'
+                  color={Constants.Colors.Text.tertiary}
+                  size={24}
+                >
+                  {data.item.name}
+                </Text.Header>
+              </View>
 
               <Display.Button
                 icon={
@@ -219,13 +224,6 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 onPress={likeItem}
               />
             </View>
-
-            <Text.Label
-              style='italic'
-              color={Constants.Colors.Text.secondary}
-            >
-              Signature Jollibee Chickenjoy with rice and gravy.
-            </Text.Label>
           </View>
 
           <View
@@ -248,7 +246,8 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                   display: 'flex',
                   flexDirection: 'row',
                   justifyContent: 'space-between',
-                  alignItems: 'center'
+                  alignItems: 'center',
+                  gap: 8
                 }
               }
             >
@@ -257,6 +256,7 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                   {
                     display: 'flex',
                     flexDirection: 'row',
+                    flexBasis: '80%',
                     gap: 12
                   }
                 }
@@ -275,7 +275,8 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                     {
                       display: 'flex',
                       flexDirection: 'column',
-                      justifyContent: 'center'
+                      justifyContent: 'center',
+                      flexShrink: 1
                     }
                   }
                 >
@@ -378,7 +379,7 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 </View>
 
                 <Text.Header>
-                  ₱{data.item.price.toFixed(2)}
+                  ₱{(data.item.price + (data.item.price * .15)).toFixed(2)}
                 </Text.Header>
               </View>
 
@@ -386,10 +387,17 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                 <Display.Button
                   onPress={
                     () => {
+                      if (!data.item.available)
+                        return addToSnackbar(data.item.name + ' is currently unavailable.', SnackbarTypes.INFO)
+
                       setIsInCart(!isInCart)
-                      if (props.cart.has(data.item.uid))
+                      if (props.cart.has(data.item.uid)) {
                         props.cart.delete(data.item.uid)
-                      else props.cart.set(data.item.uid, { quantity: 1 })
+                        addToSnackbar(data.item.name + ' removed from cart.', SnackbarTypes.DANGER)
+                      } else {
+                        props.cart.set(data.item.uid, { quantity: 1 })
+                        addToSnackbar(data.item.name + ' added to cart.', SnackbarTypes.INFO)
+                      }
                     }
                   }
                   bg={accent}
@@ -398,7 +406,10 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
                       content: isInCart ?
                         'Remove from Cart' :
                         'Add to Cart',
-                      size: 14
+                      size: 14,
+                      color: colorIsLight(accent) ?
+                        Constants.Colors.Text.tertiary :
+                        Constants.Colors.Text.alt
                     }
                   }
                   borderRadius={24}
@@ -407,6 +418,8 @@ const ViewItemPage = (props: App.PageProps & UserAppData) => {
             </View>
           </View>
         </View>
+
+        {snackbarContent}
       </SafeAreaView>
     </>
   ) : null

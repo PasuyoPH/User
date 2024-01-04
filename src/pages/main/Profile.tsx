@@ -1,8 +1,7 @@
 import { App, Constants } from 'app-types'
 import { Display, Form, Text } from '../../../components'
-import { View } from 'react-native'
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faAngleLeft, faBox, faCreditCard, faMapMarkerAlt, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { View, Pressable, NativeAppEventEmitter } from 'react-native'
+import { faAngleLeft, faMapMarkerAlt, faMotorcycle, faSignOut } from '@fortawesome/free-solid-svg-icons'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 
@@ -21,9 +20,34 @@ const ProfilePage = (user: App.UserAppData) => {
         }
       }
     >
-      <Display.Button
-        icon={faAngleLeft}
-      />
+      <Pressable
+        style={
+          {
+            flexDirection: 'row',
+            position: 'absolute',
+            marginVertical: 32,
+            zIndex: 2,
+            padding: 32
+          }
+        }
+        onPress={
+          () => (navigation.navigate as any)('Home')
+        }
+      >
+        <Display.Button
+          icon={faAngleLeft}
+          bg='transparent'
+          text={
+            { color: Constants.Colors.Text.tertiary }
+          }
+          paddingHorizontal={0}
+          paddingVertical={0}
+          onPress={
+            () => (navigation.navigate as any)('Home')
+          }
+          iconSize={18}
+        />
+      </Pressable>
       
       { /* Header section */ }
       <View
@@ -46,7 +70,7 @@ const ProfilePage = (user: App.UserAppData) => {
           {user.data.fullName}
         </Text.Label>
 
-        <View
+        {/*<View
           style={
             {
               display: 'flex',
@@ -118,7 +142,7 @@ const ProfilePage = (user: App.UserAppData) => {
               ₱ 0.00
             </Text.Label>
           </Display.FloatingCard>
-        </View>
+        </View>*/}
       </View>
 
       { /* main body */ }
@@ -187,43 +211,58 @@ const ProfilePage = (user: App.UserAppData) => {
           }
         }
       >
-        <Display.Button
-          bg={Constants.Colors.All.lightBlue}
-          onPress={
-            () => (navigation.navigate as any)('Addresses')
-          }
-          icon={faMapMarkerAlt}
-          text={
-            {
-              content: 'My Addresses'
-            }
-          }
-        />
-
-        <Display.Button
-          bg='transparent'
+        <View
           style={
             {
               display: 'flex',
               flexDirection: 'row',
               justifyContent: 'center',
               alignItems: 'center',
-              gap: 8,
-              borderRadius: 16,
-              padding: 0,
-              paddingHorizontal: 16,
-              paddingVertical: 12,
-              borderColor: Constants.Colors.Text.danger,
-              borderWidth: 1
+              gap: 4
             }
           }
+        >
+          <Display.Button
+            inverted={{ color: Constants.Colors.All.lightBlue }}
+            onPress={
+              () => (navigation.navigate as any)('Orders')
+            }
+            icon={faMotorcycle}
+            text={
+              {
+                content: 'My Orders'
+              }
+            }
+            style={{ flexBasis: '50%' }}
+          />
+
+          <Display.Button
+            bg={Constants.Colors.All.lightBlue}
+            onPress={
+              () => (navigation.navigate as any)('Addresses')
+            }
+            icon={faMapMarkerAlt}
+            text={
+              {
+                content: 'My Addresses'
+              }
+            }
+            style={{ flexBasis: '50%' }}
+          />
+        </View>
+
+        <Display.Button
+          bg='transparent'
           inverted={
             { color: Constants.Colors.Text.danger }
           }
           text={
-            { content: 'Delete Account' }
+            { content: 'Log out', reverse: true }
           }
-          icon={faTrash}
+          icon={faSignOut}
+          onPress={
+            () => NativeAppEventEmitter.emit('token', undefined)
+          }
         />
       </View>
     </SafeAreaView>

@@ -1,194 +1,164 @@
 import { Account, App, Constants, Deliveries } from 'app-types'
-import { Card, Display, Form, Text } from '../../../components'
+import { Display, Form, Text } from '../../../components'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { ActivityIndicator, ScrollView, View } from 'react-native'
+import { ActivityIndicator, ScrollView, View, Alert, BackHandler, Pressable, Image } from 'react-native'
 import { useFocusEffect } from '@react-navigation/native'
 import { useCallback, useState } from 'react'
 import { Http } from 'app-structs'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
 import { faArrowRight, faBalanceScale, faBoxOpen } from '@fortawesome/free-solid-svg-icons'
 import { useNavigation } from '@react-navigation/native'
-
-interface FetchedDeliveries {
-  deliveries: Deliveries.Data[]
-  riders: Account.RiderAccountData[]
-}
+import UploadImage from '../../../components/Cards/UploadImage'
 
 const http = new Http.Client()
 
 const DeliveryHomePage = (user: App.UserAppData) => {
-  const [data, setData] = useState<FetchedDeliveries>(),
-    [weight, setWeight] = useState<number>(0),
+  const [weight, setWeight] = useState<string>(),
     [name, setName] = useState<string>(),
-    [deliveries, setDeliveries] = useState<Deliveries.Data[]>(),
-    [drafts, setDrafts] = useState<Deliveries.Data[]>(),
+    [itemImg, setItemImg] = useState<string>(),
+    [imageModalShown, setImageModalShown] = useState(false),
+    [imageUrl, setImageUrl] = useState<string>(),
+    [deliveriesCount, setDeliveriesCount] = useState<number>(),
+    [
+      [error, message],
+      setResult
+    ] = useState([false, '']),
     navigation = useNavigation()
+
+  const onBackPress = () => {
+    Alert.alert(
+      'Exit App',
+      'Are you sure you want to exit?',
+      [
+        {
+          text: 'No',
+          onPress: () => {}
+        },
+        {
+          text: 'Yes',
+          onPress: () => BackHandler.exitApp()
+        }
+      ],
+      { cancelable: false }
+    )
+
+    return true
+  }
 
   useFocusEffect(
     useCallback(
       () => {
         const getDeliveries = async () => {
-          const res = await http.request<FetchedDeliveries>(
+          const res = await http.request<number>(
             {
               method: 'get',
-              url: Constants.Url.Routes.DELIVERIES,
+              url: Constants.Url.Routes.USER_ACTIVE_DELIVERIES,
               headers: {
                 Authorization: user.token
               }
             }
           )
 
-          setData(res.value)
-          if (res.value) {
-            const deliveriesArr = [],
-              draftsArr = []
-
-            for (const delivery of res.value.deliveries) {
-              if (delivery.draft)
-                draftsArr.push(delivery)
-              else deliveriesArr.push(delivery)
-            }
-
-            setDeliveries(deliveriesArr)
-            setDrafts(draftsArr)
-          }
+          
+          setDeliveriesCount(res.value ?? 0)
         }
 
         getDeliveries()
           .catch(console.error)
+
+        BackHandler.addEventListener('hardwareBackPress', onBackPress)
+        return () => {
+          BackHandler.removeEventListener('hardwareBackPress', onBackPress)
+        }
       },
       []
     )
   )
 
   return (
-    <SafeAreaView>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={
-          {
-            display: 'flex',
-            flexDirection: 'column',
-            paddingVertical: 8,
-            gap: 32
-          }
+    <>
+      <Display.Modal
+        show={imageModalShown}
+        onDismiss={
+          () => setImageModalShown(false)
         }
-        style={
-          { marginBottom: 8 }
+        container={
+          {
+            style: {
+              margin: 32
+            }
+          }
         }
       >
-        <Display.Header
-          {...user.data}
-          hideFavourites
-        />
+        <UploadImage
+          token={user.token}
+          onUpload={
+            (uri, original) => {
+              setItemImg(original)
+              setImageUrl(uri)
 
-        {
-          drafts && drafts.length >= 1 ? (
-            <Display.FloatingCard
-              style={
-                {
-                  display: 'flex',
-                  flexDirection: 'column',
-                  marginHorizontal: 32,
-                  gap: 8
-                }
-              }
-              color={Constants.Colors.Text.gold}
-            >
-              <Text.Label
-                color={Constants.Colors.Text.tertiary}
-              >
-                Seems like you have drafts that are not yet completed. Check them out!
-              </Text.Label>
-
-              <View style={{ flexDirection: 'row' }}>
-                <Display.Button
-                  bg={Constants.Colors.Text.tertiary}
-                  text={
-                    { content: 'Visit', reverse: true }
-                  }
-                  icon={faArrowRight}
-                />
-              </View>
-            </Display.FloatingCard>
-          ) : null
-        }
-        
-        <View
-          style={
-            {
-              display: 'flex',
-              flexDirection: 'column'
+              setImageModalShown(false)
             }
           }
-        >
-          <View
-            style={
-              { paddingHorizontal: 32 }
-            }
-          >
-            {
-              deliveries ? (
-                <Text.Label
-                  color={
-                    deliveries && deliveries.length >= 1 ?
-                      Constants.Colors.Text.green :
-                      Constants.Colors.Text.danger
-                  }
-                >
-                  {
-                    deliveries.length >= 1 ?
-                      `You currently have ${deliveries.length} active deliver${deliveries.length === 1 ? 'y' : 'ies'}.` :
-                      'You don\'t have any active deliveries right now.'
-                  }
-                </Text.Label>
-              ) : (
-                <ActivityIndicator
-                  color={Constants.Colors.All.main}
-                />
-              )
-            }
-          </View>
-          
-          <ScrollView
-            contentContainerStyle={
-              {
-                display: 'flex',
-                flexDirection: 'row',
-                paddingHorizontal: 32,
-                paddingVertical: deliveries && deliveries.length >= 1 ? 16 : 0,
-                gap: 16
-              }
-            }
-            horizontal
-            showsHorizontalScrollIndicator={false}
-          >
-            {
-              deliveries ? (
-                deliveries.map(
-                  (delivery, idx) => (
-                    <Card.DeliveryCard
-                      key={idx}
-                      delivery={delivery}
-                      rider={data.riders[delivery.uid]}
-                    />
-                  )
-                )
-              ) : null
-            }
-          </ScrollView>
-        </View>
+        />
+      </Display.Modal>
 
-        <View
-          style={
+      <SafeAreaView>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={
             {
               display: 'flex',
               flexDirection: 'column',
-              paddingHorizontal: 32,
-              gap: 16
+              paddingVertical: 8,
+              gap: 4,
             }
           }
+          style={
+            { marginBottom: 8 }
+          }
         >
+          <Display.Header
+            {...user.data}
+            hideFavourites
+          />
+
+          {
+            deliveriesCount >= 1 ? (
+              <Display.FloatingCard
+                style={
+                  {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    marginHorizontal: 32,
+                    gap: 8,
+                    marginTop: 16
+                  }
+                }
+                color={Constants.Colors.Text.gold}
+              >
+                <Text.Label
+                  color={Constants.Colors.Text.tertiary}
+                >
+                  You currently have on going deliveries. Check them out!
+                </Text.Label>
+
+                <View style={{ flexDirection: 'row' }}>
+                  <Display.Button
+                    bg={Constants.Colors.Text.tertiary}
+                    text={
+                      { content: 'Visit', reverse: true }
+                    }
+                    icon={faArrowRight}
+                    onPress={
+                      () => (navigation.navigate as any)('Orders')
+                    }
+                  />
+                </View>
+              </Display.FloatingCard>
+            ) : null
+          }
+          
           <View
             style={
               {
@@ -197,22 +167,61 @@ const DeliveryHomePage = (user: App.UserAppData) => {
               }
             }
           >
-            <Text.Header
-              weight='bold'
-              color={Constants.Colors.Text.tertiary}
-              size={28}
+            <View
+              style={
+                { paddingHorizontal: 32, marginTop: 16 }
+              }
             >
-              Create a Delivery
-            </Text.Header>
-
-            <Text.Label
-              font='normal'
-              style='italic'
-              color={Constants.Colors.Text.secondary}
-              size={14}
+              {
+                typeof deliveriesCount === 'number' ? (
+                  <Text.Label
+                    color={
+                      deliveriesCount >= 1 ?
+                        Constants.Colors.Text.green :
+                        Constants.Colors.Text.danger
+                    }
+                  >
+                    {
+                      deliveriesCount ?
+                        `You currently have ${deliveriesCount} active deliver${deliveriesCount === 1 ? 'y' : 'ies'}.` :
+                        'You don\'t have any active deliveries right now.'
+                    }
+                  </Text.Label>
+                ) : (
+                  <ActivityIndicator
+                    color={Constants.Colors.All.main}
+                  />
+                )
+              }
+            </View>
+            
+            <ScrollView
+              contentContainerStyle={
+                {
+                  display: 'flex',
+                  flexDirection: 'row',
+                  paddingHorizontal: 32,
+                  //paddingVertical: deliveries && deliveries.length >= 1 ? 16 : 0,
+                  gap: 16
+                }
+              }
+              horizontal
+              showsHorizontalScrollIndicator={false}
             >
-              Create your delivery today and get started!
-            </Text.Label>
+              {
+                /*deliveries ? (
+                  deliveries.map(
+                    (delivery, idx) => (
+                      <Card.DeliveryCard
+                        key={idx}
+                        delivery={delivery}
+                        rider={data.riders[delivery.uid]}
+                      />
+                    )
+                  )
+                ) :*/ null
+              }
+            </ScrollView>
           </View>
 
           <View
@@ -220,27 +229,53 @@ const DeliveryHomePage = (user: App.UserAppData) => {
               {
                 display: 'flex',
                 flexDirection: 'column',
-                gap: 8
+                paddingHorizontal: 32,
+                gap: 16
               }
             }
           >
-            { /* Item to Deliver */ }
             <View
               style={
                 {
                   display: 'flex',
-                  flexDirection: 'row',
+                  flexDirection: 'column'
+                }
+              }
+            >
+              <Text.Header
+                weight='bold'
+                color={Constants.Colors.Text.tertiary}
+                size={28}
+              >
+                Create a Delivery
+              </Text.Header>
+
+              <Text.Label
+                font='normal'
+                style='italic'
+                color={Constants.Colors.Text.secondary}
+                size={14}
+              >
+                Create your delivery today and get started!
+              </Text.Label>
+            </View>
+
+            <View
+              style={
+                {
+                  display: 'flex',
+                  flexDirection: 'column',
                   gap: 8
                 }
               }
             >
+              { /* Item to Deliver */ }
               <View
                 style={
                   {
                     display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                    flex: 1
+                    flexDirection: 'row',
+                    gap: 8
                   }
                 }
               >
@@ -248,103 +283,210 @@ const DeliveryHomePage = (user: App.UserAppData) => {
                   style={
                     {
                       display: 'flex',
-                      flexDirection: 'row',
+                      flexDirection: 'column',
                       gap: 4,
-                      alignItems: 'center'
+                      flex: 1
                     }
                   }
                 >
-                  <FontAwesomeIcon
-                    icon={faBoxOpen}
-                    color={Constants.Colors.Text.tertiary}
-                  />
-
-                  <Text.Label
-                    font='normal'
-                    weight='bold'
-                    size={18}
-                    color={Constants.Colors.Text.tertiary}
+                  <View
+                    style={
+                      {
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: 4,
+                        alignItems: 'center'
+                      }
+                    }
                   >
-                    Item Name
-                  </Text.Label>
+                    <FontAwesomeIcon
+                      icon={faBoxOpen}
+                      color={Constants.Colors.Text.tertiary}
+                    />
+
+                    <Text.Label
+                      font='normal'
+                      weight='bold'
+                      size={18}
+                      color={Constants.Colors.Text.tertiary}
+                    >
+                      Item Name
+                    </Text.Label>
+                  </View>
+
+                  <Form.Input
+                    fontSize={12}
+                    placeholder='Item name'
+                    value={name}
+                    onValue={setName}
+                  />
                 </View>
 
-                <Form.Input
-                  fontSize={12}
-                  placeholder='Item name'
-                  value={name}
-                  onValue={setName}
-                />
-              </View>
-
-              <View
-                style={
-                  {
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: 4,
-                    flex: 1
-                  }
-                }
-              >
                 <View
                   style={
                     {
                       display: 'flex',
-                      flexDirection: 'row',
+                      flexDirection: 'column',
                       gap: 4,
-                      alignItems: 'center'
+                      flex: 1
                     }
                   }
                 >
-                  <FontAwesomeIcon
-                    icon={faBalanceScale}
-                    color={Constants.Colors.Text.tertiary}
-                  />
-
-                  <Text.Label
-                    font='normal'
-                    weight='bold'
-                    size={18}
-                    color={Constants.Colors.Text.tertiary}
+                  <View
+                    style={
+                      {
+                        display: 'flex',
+                        flexDirection: 'row',
+                        gap: 4,
+                        alignItems: 'center'
+                      }
+                    }
                   >
-                    Expected Weight
-                  </Text.Label>
-                </View>
+                    <FontAwesomeIcon
+                      icon={faBalanceScale}
+                      color={Constants.Colors.Text.tertiary}
+                    />
 
-                <Form.Input
-                  fontSize={12}
-                  placeholder='Weight (kg)'
-                  numberOnly
-                  value={weight.toString()}
-                  onValue={
-                    (value) => setWeight(Number(value))
-                  }
-                />
+                    <Text.Label
+                      font='normal'
+                      weight='bold'
+                      size={18}
+                      color={Constants.Colors.Text.tertiary}
+                    >
+                      Expected Weight
+                    </Text.Label>
+                  </View>
+
+                  <Form.Input
+                    fontSize={12}
+                    placeholder='Weight (kg)'
+                    numberOnly
+                    value={weight}
+                    onValue={
+                      (value) => setWeight(value)
+                    }
+                  />
+                </View>
               </View>
+
+              <Pressable
+                style={
+                  {
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    width: '100%',
+                    height: 256 - (128 / 2),
+                    backgroundColor: Constants.Colors.Text.secondary + '30',
+                    padding: itemImg ? 0 : 32
+                  }
+                }
+                onPress={
+                  () => setImageModalShown(true)
+                }
+              >
+                {
+                  itemImg ? (
+                    <Image
+                      source={
+                        { uri: itemImg }
+                      }
+                      style={
+                        {
+                          width: '100%',
+                          height: '100%'
+                        }
+                      }
+                    />
+                  ) : (
+                    <Text.Label
+                      font='normal'
+                      weight='bold'
+                      color={Constants.Colors.Text.tertiary}
+                      align='center'
+                    >
+                      Click here to upload a picture of the item.
+                    </Text.Label>
+                  )
+                }
+              </Pressable>
+
+              {
+                itemImg ? (
+                  <Display.Button
+                    text={
+                      { content: 'Continue' }
+                    }
+                    inverted={
+                      {
+                        color: Constants.Colors.All.lightBlue,
+                        secondaryColor: Constants.Colors.All.whiteSmokeAlt
+                      }
+                    }
+                    onPress={
+                      () => {
+                        setResult([false, ''])
+
+                        if (!name)
+                          return setResult(
+                          [
+                            true,
+                            'Error: Make srue to provide the name of the item to deliver.'
+                          ]
+                        )
+
+                        if (isNaN(weight as any))
+                          return setResult(
+                          [
+                            true,
+                            'Eror: Please make sure that the weight is a valid number and not less than 0 or greater than 25.'
+                          ]
+                        )
+
+                        if (!imageUrl)
+                          return setResult(
+                            [
+                              true,
+                              'Error: Please make sure to provide an image of the item to deliver.'
+                            ]
+                          );
+                        
+                        (navigation.navigate as any)(
+                          'NewDelivery',
+                          {
+                            form: {
+                              name,
+                              weight: Number(weight),
+                              proof: imageUrl
+                            }
+                          }
+                        )
+                      }
+                    }
+                  />
+                ) : null
+              }
             </View>
 
-            <Display.Button
-              text={
-                { content: 'Continue' }
-              }
-              inverted={
-                {
-                  color: Constants.Colors.All.lightBlue,
-                  secondaryColor: Constants.Colors.All.whiteSmokeAlt
-                }
-              }
-              onPress={
-                () => (navigation.navigate as any)(
-                  'NewDelivery',
-                  { form: { name, weight } }
-                )
-              }
-            />
+            {
+              message ? (
+                <Text.Label
+                  color={
+                    error ?
+                      Constants.Colors.Text.danger :
+                      Constants.Colors.Text.green
+                  }
+                  align='center'
+                >
+                  {message}
+                </Text.Label>
+              ) : null
+            }
           </View>
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </>
   )
 }
 

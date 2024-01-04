@@ -20,6 +20,8 @@ interface MapProps {
   askForLocation?: boolean
   defaultRegion?: Region
   header?: MapHeaderProps
+  hideLabels?: boolean
+  moveable?: boolean
 }
 
 const Map = (props: MapProps & MapViewProps) => {
@@ -148,7 +150,34 @@ const Map = (props: MapProps & MapViewProps) => {
           ) : ( location ?? props.defaultRegion )
         }
         provider={PROVIDER_GOOGLE}
-      />
+        customMapStyle={
+          props.hideLabels ? (
+            [
+              {
+                "featureType": "poi.business",
+                "elementType": "labels.text.fill",
+                "stylers": [
+                  {
+                    "visibility": "off"
+                  }
+                ]
+              },
+              {
+                "featureType": "poi.business",
+                "elementType": "labels.text.stroke",
+                "stylers": [
+                  {
+                    "visibility": "off"
+                  }
+                ]
+              }
+            ]
+          ) : undefined
+        }
+        scrollEnabled={props.moveable ?? true}
+      >
+        {props.children}
+      </MapView>
 
       {
         props.header ? (
@@ -203,7 +232,7 @@ const Map = (props: MapProps & MapViewProps) => {
                     placeholder='Location Name'
                     query={
                       {
-                        key: ExpoConstants.expoConfig.android.config.googleMaps.apiKey,
+                        key: 'AIzaSyAe1O4RsaElYL79mHnPSHRGL_lVCf9uP0M',
                         language: 'en',
                         components: 'country:ph'
                       }

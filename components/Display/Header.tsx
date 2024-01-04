@@ -13,6 +13,7 @@ import BurgerSvg from '../../assets/burger.svg'
 
 interface HeaderProps {
   hideFavourites?: boolean
+  orderCount?: number
 }
 
 const Header = (user: Account.UserAccountData & HeaderProps) => {
@@ -254,7 +255,7 @@ const Header = (user: Account.UserAccountData & HeaderProps) => {
             >
               <Image
                 source={
-                  { uri: 'https://scontent.fmnl8-3.fna.fbcdn.net/v/t39.30808-6/322113042_513339527267490_2630672777140286584_n.jpg?_nc_cat=105&ccb=1-7&_nc_sid=a2f6c7&_nc_eui2=AeFiDSKfujbnrZc5hkj-9TuxPaFvLbhzZq09oW8tuHNmreiVqOBaNvtPKm8TzYDZoiuKz86RhfjaaUo3FTJP-j2r&_nc_ohc=y96BBpUC-PwAX-VoXl5&_nc_ht=scontent.fmnl8-3.fna&oh=00_AfAZgFAGFT89KQIrskQJGS5Tzp38ko_KslehTT4k_nQDZQ&oe=64F43E95' }
+                  { uri: 'https://cdn-icons-png.flaticon.com/512/3177/3177440.png' }
                 }
                 style={
                   {

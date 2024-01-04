@@ -1,4 +1,4 @@
-import { ActivityIndicator, NativeAppEventEmitter, View } from 'react-native'
+import { ActivityIndicator, NativeAppEventEmitter, ScrollView, View } from 'react-native'
 import { PageProps, UserAppData } from 'app-types/src/app'
 import { Address, Constants, Items, Merchant, Payments, Paypal } from 'app-types'
 import { faAngleLeft } from '@fortawesome/free-solid-svg-icons'
@@ -9,13 +9,17 @@ import { Orders } from 'app-types'
 import { Http as HttpType } from 'app-types'
 import * as Linking from 'expo-linking'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
+import { SafeAreaView } from 'react-native-safe-area-context'
+import useStateRef from 'react-usestateref'
 
 const http = new Http.Client()
 
 // page to choose payment method
+// FOR ORDERS
 const ChoosePaymentMethodPage = (props: PageProps & UserAppData) => {
   const [checkoutItems, setCheckoutItems] = useState<HttpType.OrderData[]>(),
     [buttonLoading, setButtonLoading] = useState(false),
+    [_, setReceipt, receipt] = useStateRef<string>(),
     { items, address, merchant, order } = props.route.params as {
       items: Items.Item[],
       address: Address.AddressData,
@@ -24,67 +28,61 @@ const ChoosePaymentMethodPage = (props: PageProps & UserAppData) => {
     },
     [methods, setMethods] = useState<Payments.PaymentMethod[]>(),
     [selectedMethod, setSelectedMethod] = useState(0),
+    [
+      [error, message],
+      setResult
+    ] = useState([false, '']),
     navigation = useNavigation()
 
-  const createOrder = async (orderItems: HttpType.OrderData[], orderAddress: Address.AddressData) => {
-      setButtonLoading(true)
-      const result = await http.request<Orders.Order>(
-        {
-          method: 'post',
-          url: Constants.Url.Routes.ORDERS,
-          headers: {
-            Authorization: props.token
-          },
-          data: {
-            address: orderAddress.uid,
-            data: orderItems
-          }
+  const createPaymentUrl = async (data: Orders.Order, paymentType: number) => {
+    setResult([false, ''])
+    if (!data) return setButtonLoading(false)
+
+    // create payment
+    const result = await http.request<Paypal.PaymentPaypalCreated>(
+      {
+        method: 'post',
+        url: Constants.Url.Routes.PAYMENT,
+        headers: {
+          Authorization: props.token
+        },
+        data: {
+          uid: data.uid,
+          type: 1,
+          payment_method: paymentType,
+          payment_receipt: receipt.current
         }
+      }
+    )
+
+    setButtonLoading(false)
+
+    if (result.error)
+      return setResult(
+        [
+          true,
+          result.message ?? 'Error: Payment creation failed. Please try again or contact us.'
+        ]
       )
 
-      return result.value
-    },
-    createPaymentUrl = async (data: Orders.Order, paymentType: number) => {
-      if (!data) return setButtonLoading(false)
+    if (result.value) {
+      if (result.value.redirectTo)
+        Linking.openURL(result.value.redirectTo)
+      else {
+        // send to a payment processed page
+        (navigation.navigate as any)('Processed')
+      }
 
-      // create payment
-      const result = await http.request<Paypal.PaymentPaypalCreated>(
-        {
-          method: 'post',
-          url: Constants.Url.Routes.PAYMENT,
-          headers: {
-            Authorization: props.token
-          },
-          data: {
-            uid: data.uid,
-            type: 1,
-            payment_method: paymentType
-          }
-        }
-      )
+      // clear user cart as we are finished
+      NativeAppEventEmitter.emit('cart-clear')
 
-      setButtonLoading(false)
-
-      if (result.value) {
-        if (result.value.redirectTo)
-          Linking.openURL(result.value.redirectTo)
-        else {
-          // send to a payment processed page
-          (navigation.navigate as any)('Processed')
-        }
-
-        // clear user cart as we are finished
-        NativeAppEventEmitter.emit('cart-clear')
-
-        return true
-      } else return false
-    }
+      return true
+    } else return false
+  }
 
   useFocusEffect(
     useCallback(
       () => {
-        console.log('Focused')
-
         const cart = new Map(props.cart)
   
         // remove all items that have 0 quantity
@@ -119,11 +117,13 @@ const ChoosePaymentMethodPage = (props: PageProps & UserAppData) => {
               }
             )
   
-            setMethods(res.value ?? [])
+            setMethods(
+              res.value ?
+                [res.value[0]] :
+                []
+            )
           }
-
-        console.log(order, address)
-  
+          
         getPaymentMethods()
           .catch(console.error)
   
@@ -135,59 +135,99 @@ const ChoosePaymentMethodPage = (props: PageProps & UserAppData) => {
   )
 
   return (
-    <>
-      <View
-        style={
-          {
-            display: 'flex',
-            flexDirection: 'column',
-            paddingHorizontal: 32,
-            paddingVertical: 64,
-            flexGrow: 1,
-            backgroundColor: Constants.Colors.All.whiteSmokeAlt,
-            gap: 24
-          }
-        }
-      >
-        <Card.ConfirmOrder
-          order={order}
-          merchant={merchant}
-          address={address}
-          items={items}
-          cart={props.cart}
-        />
-
+    <SafeAreaView>
+      <ScrollView>
         <View
           style={
             {
               display: 'flex',
-              flexDirection: 'row'
+              flexDirection: 'column',
+              paddingHorizontal: 32,
+              paddingVertical: 64,
+              flexGrow: 1,
+              backgroundColor: Constants.Colors.All.whiteSmokeAlt,
+              gap: 24
             }
           }
         >
-          <Display.Button
-            icon={faAngleLeft}
-            iconSize={24}
-            text={{ color: Constants.Colors.Text.tertiary }}
-            bg='#00000000'
-            paddingHorizontal={0}
-            onPress={navigation.goBack}
+          <Card.ConfirmOrder
+            order={order}
+            merchant={merchant}
+            address={address}
+            items={items}
+            cart={props.cart}
           />
-        </View>
 
-        <View
-          style={
-            { paddingHorizontal: 8 }
-          }
-        >
-          <Text.Header
-            color={Constants.Colors.Text.tertiary}
-            size={18}
-            //weight='bold'
-            font='Wolf Sans'
+          <View
+            style={
+              {
+                display: 'flex',
+                flexDirection: 'row'
+              }
+            }
           >
-            Payment Methods
-          </Text.Header>
+            <Display.Button
+              icon={faAngleLeft}
+              iconSize={24}
+              text={{ color: Constants.Colors.Text.tertiary }}
+              bg='#00000000'
+              paddingHorizontal={0}
+              onPress={navigation.goBack}
+            />
+          </View>
+
+          <View
+            style={
+              { paddingHorizontal: 8 }
+            }
+          >
+            <Text.Header
+              color={Constants.Colors.Text.tertiary}
+              size={18}
+              //weight='bold'
+              font='Wolf Sans'
+            >
+              Payment Methods
+            </Text.Header>
+          </View>
+
+          <View
+            style={
+              {
+                display: 'flex',
+                flexDirection: 'column',
+                paddingVertical: 8,
+                gap: 8
+              }
+            }
+          >
+            {
+              methods ? (
+                methods.map(
+                  (method, idx) => (
+                    <Card.PaymentMethod
+                      key={idx}
+                      index={idx}
+                      selected={idx === selectedMethod}
+                      name={method.name}
+                      onPress={() => setSelectedMethod(idx)}
+                      image={method.image}
+                      requireImage={method.requireImage}
+                      token={props.token}
+                      onComplete={
+                        (data) => setReceipt(data.img)
+                      }
+                    />
+                  )
+                )
+              ) : (
+                <ActivityIndicator
+                  color={Constants.Colors.All.main}
+                  size={32}
+                />
+              )
+            }
+          </View>
         </View>
 
         <View
@@ -195,79 +235,60 @@ const ChoosePaymentMethodPage = (props: PageProps & UserAppData) => {
             {
               display: 'flex',
               flexDirection: 'column',
-              paddingVertical: 8,
+              //position: 'absolute',
+              //  bottom: 70,
+              width: '100%',
+              justifyContent: 'center',
+              paddingHorizontal: 32,
+              marginBottom: 32,
               gap: 8
             }
           }
         >
+          <Display.Button
+            bg={Constants.Colors.Layout.tertiary}
+            text={
+              checkoutItems || !buttonLoading ? (
+                { content: 'Continue' }
+              ) : undefined
+            }
+            style={
+              { width: '100%' }
+            }
+            onPress={
+              async () => {
+                if (!checkoutItems || buttonLoading) return
+                // after creating the order, create a new payment url which will redirect to the payment url
+                await createPaymentUrl(order, selectedMethod)
+              }
+            }
+          >
+            {
+              !checkoutItems || buttonLoading ? (
+                <ActivityIndicator
+                  color={Constants.Colors.Text.alt}
+                />
+              ) : undefined
+            }
+          </Display.Button>
+
           {
-            methods ? (
-              methods.map(
-                (method, idx) => (
-                  <Card.PaymentMethod
-                    key={idx}
-                    index={idx}
-                    selected={idx === selectedMethod}
-                    name={method.name}
-                    onPress={() => setSelectedMethod(idx)}
-                    image={method.image}
-                  />
-                )
-              )
-            ) : (
-              <ActivityIndicator
-                color={Constants.Colors.All.main}
-                size={32}
-              />
-            )
+            message ? (
+              <Text.Label
+                color={
+                  error ?
+                    Constants.Colors.Text.danger :
+                    Constants.Colors.Text.green
+                }
+                align='center'
+              >
+                {message}
+              </Text.Label>
+            ) : null
           }
         </View>
-      </View>
-
-      <View
-        style={
-          {
-            display: 'flex',
-            flexDirection: 'row',
-            position: 'absolute',
-            bottom: 70,
-            width: '100%',
-            justifyContent: 'center',
-            paddingHorizontal: 32
-          }
-        }
-      >
-        <Display.Button
-          bg={Constants.Colors.Layout.tertiary}
-          text={
-            checkoutItems || !buttonLoading ? (
-              { content: 'Continue' }
-            ) : undefined
-          }
-          style={
-            { width: '100%' }
-          }
-          onPress={
-            async () => {
-              if (!checkoutItems || buttonLoading) return
-              // create the order
-              const order = await createOrder(checkoutItems, address)
-
-              // after creating the order, create a new payment url which will redirect to the payment url
-              await createPaymentUrl(order, selectedMethod)
-            }
-          }
-        >
-          {
-            !checkoutItems || buttonLoading ? (
-              <ActivityIndicator
-                color={Constants.Colors.Text.alt}
-              />
-            ) : undefined
-          }
-        </Display.Button>
-      </View>
-    </>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 

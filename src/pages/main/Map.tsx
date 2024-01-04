@@ -1,14 +1,9 @@
-import MapView, { Marker, PROVIDER_GOOGLE } from 'react-native-maps'
+import MapView, { PROVIDER_GOOGLE } from 'react-native-maps'
 import * as Types from 'app-types'
-import { useCallback, useEffect, useState } from 'react'
-import { useFocusEffect } from '@react-navigation/native'
 import { Http } from 'app-structs'
 import { ActivityIndicator, View } from 'react-native'
 import { Text } from '../../../components'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { FloatingCard } from '../../../components/Display'
-import SelectDropdown from 'react-native-select-dropdown'
-import { JobStatusAsText } from 'app-types/src/job'
 
 const http = new Http.Client()
 

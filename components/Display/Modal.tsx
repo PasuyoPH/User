@@ -1,5 +1,5 @@
 import Animated, { FadeIn, FadeOut, SlideInDown } from 'react-native-reanimated'
-import { Pressable, ViewStyle, StyleProp, ScrollView, View } from 'react-native'
+import { Pressable, ViewStyle, StyleProp, ScrollView } from 'react-native'
 import { Portal } from '@gorhom/portal'
 import { Constants } from 'app-types'
 

@@ -13,8 +13,12 @@ const NewDeliveryPage = (props: App.PageProps & App.UserAppData) => {
   const { pickup, dropoff, form } = props.route.params as {
       pickup: Address.AddressData,
       dropoff: Address.AddressData,
-      form: { name: string, weight: number }
+      form: { name: string, weight: number, proof: string }
     },
+    [
+      [error, message],
+      setResult
+    ] = useState([false, '']),
     navigation = useNavigation()
 
   const navigateToAddress = (name: string) => (navigation.navigate as any)(
@@ -30,6 +34,22 @@ const NewDeliveryPage = (props: App.PageProps & App.UserAppData) => {
       return true
     },
     pressContinue = async () => {
+      setResult([false, ''])
+
+      if (
+        !form.name ||
+        (
+          isNaN(form.weight) ||
+          form.weight <= 0
+        )
+      )
+        return setResult(
+          [
+            true,
+            'Error: Please make sure to have a name for your delivery and proper weight.'
+          ]
+        )
+
       // create new draft here
       const res = await http.request<Deliveries.Data>(
         {
@@ -43,7 +63,15 @@ const NewDeliveryPage = (props: App.PageProps & App.UserAppData) => {
             delivery: form
           }
         }
-      );
+      )
+
+      if (res.error)
+        return setResult(
+          [
+            true,
+            res.message ?? 'Something went wrong. Please try again.'
+          ]
+        );
 
       (navigation.navigate as any)(
         'Confirm',
@@ -235,6 +263,21 @@ const NewDeliveryPage = (props: App.PageProps & App.UserAppData) => {
               icon={faArrowRight}
               onPress={pressContinue}
             />
+          ) : null
+        }
+
+        {
+          message ? (
+            <Text.Label
+              color={
+                error ?
+                  Constants.Colors.Text.danger :
+                  Constants.Colors.Text.green
+              }
+              align='center'
+            >
+              {message}
+            </Text.Label>
           ) : null
         }
       </View>

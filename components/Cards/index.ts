@@ -1,13 +1,15 @@
 import Address from './Address'
 import PaymentMethod from './PaymentMethod'
-import DeliveryCard from './Delivery'
+import FullJobCard from './FullJobCard'
 import ConfirmDeliveryCard from './ConfirmDelivery'
 import ConfirmOrderCard from './ConfirmOrder'
+import JobCard from './Job'
 
 export {
   Address,
   PaymentMethod,
-  DeliveryCard,
+  FullJobCard as FullJob,
   ConfirmDeliveryCard as ConfirmDelivery,
-  ConfirmOrderCard as ConfirmOrder
+  ConfirmOrderCard as ConfirmOrder,
+  JobCard as Job
 }

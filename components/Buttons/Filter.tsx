@@ -1,6 +1,6 @@
 import { View } from 'react-native'
 import * as Display from '../Display'
-import { faBowlRice, faBurger, faConciergeBell, faIceCream, faPizzaSlice, faQuestion } from '@fortawesome/free-solid-svg-icons'
+import { faBowlFood, faBowlRice, faBurger, faCoffee, faConciergeBell, faDrumstickBite, faIceCream, faPizzaSlice, faQuestion } from '@fortawesome/free-solid-svg-icons'
 import { Constants, Filters } from 'app-types'
 
 const FilterData = [
@@ -15,7 +15,7 @@ const FilterData = [
   },
 
   {
-    icon: faQuestion,
+    icon: faDrumstickBite,
     color: 'red'
   },
 
@@ -30,7 +30,12 @@ const FilterData = [
   },
 
   {
-    icon: faQuestion,
+    icon: faCoffee,
+    color: Constants.Colors.All.brown
+  },
+
+  {
+    icon: faBowlFood,
     color: Constants.Colors.Text.secondary
   }
 ] // todo: move icons to database

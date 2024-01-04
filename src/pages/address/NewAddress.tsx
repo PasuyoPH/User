@@ -34,11 +34,12 @@ const NewAddressPage = (user: App.UserAppData) => {
       [error, message],
       setResult
     ] = useState([false, '']),
+    [moveable, setMoveable] = useState(true),
     navigation = useNavigation()
 
   const reverseLocationGeocode = async () => {
       if (formRef.current.text) return
-      const result = await http.request<string>(
+      /*const result = await http.request<string>(
         {
           url: Constants.Url.Routes.GEOCODE,
           method: 'post',
@@ -50,11 +51,11 @@ const NewAddressPage = (user: App.UserAppData) => {
             Authorization: user.token
           }
         }
-      )
+      )*/
       
       setForm(
         (currentForm) => (
-          { ...currentForm, text: result.value ?? '' }
+          { ...currentForm, text: '' }
         )
       )
     },
@@ -101,6 +102,7 @@ const NewAddressPage = (user: App.UserAppData) => {
             setResult([false, ''])
             setModalShown(false)
             setForm({})
+            setMoveable(true)
           }
         }
         show={modalShown}
@@ -113,7 +115,7 @@ const NewAddressPage = (user: App.UserAppData) => {
         }
       >
         {
-          form.text ? (
+          typeof form.text === 'string' ? (
             <View
               style={
                 {
@@ -157,12 +159,29 @@ const NewAddressPage = (user: App.UserAppData) => {
                   </Text.Label>
                 </View>
 
-                <Text.Label
-                  size={12}
-                  color={Constants.Colors.Text.secondary}
-                >
-                  {form.text}
-                </Text.Label>
+                {
+                  moveable ? (
+                    <Form.Input
+                      fontSize={12}
+                      placeholder='Address Data'
+                      value={form.template}
+                      onValue={
+                        (value) => setForm(
+                          (currentForm) => (
+                            { ...currentForm, text: value ?? '' }
+                          )
+                        )
+                      }
+                    />
+                  ) : (
+                    <Text.Label
+                      size={12}
+                      color={Constants.Colors.Text.secondary}
+                    >
+                      {form.text}
+                    </Text.Label>
+                  )
+                }
               </View>
 
               { /* Landmark */ }
@@ -416,13 +435,13 @@ const NewAddressPage = (user: App.UserAppData) => {
                   fontSize={12}
                   placeholder='Name Here'
                   value={form.template}
-                    onValue={
-                      (value) => setForm(
-                        (currentForm) => (
-                          { ...currentForm, template: value ?? '' }
-                        )
+                  onValue={
+                    (value) => setForm(
+                      (currentForm) => (
+                        { ...currentForm, template: value ?? '' }
                       )
-                    }
+                    )
+                  }
                 />
               </View>
 
@@ -540,13 +559,21 @@ const NewAddressPage = (user: App.UserAppData) => {
           header={
             {
               onBack: () => navigation.goBack(),
-              onSearch: (address) => setForm(
-                (currentForm) => (
-                  { ...currentForm, text: address }
+              onSearch: (address) => {
+                setForm(
+                  (currentForm) => (
+                    {
+                      ...currentForm,
+                      text: address
+                    }
+                  )
                 )
-              )
+
+                setMoveable(false)
+              }
             }
           }
+          moveable={moveable}
         />
 
         {

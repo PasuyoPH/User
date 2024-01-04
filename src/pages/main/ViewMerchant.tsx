@@ -1,15 +1,15 @@
 import { PageProps, UserAppData } from 'app-types/src/app'
-import { useFocusEffect } from '@react-navigation/native'
+import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { useCallback, useState } from 'react'
 import { Constants, Merchant } from 'app-types'
 import { Http } from 'app-structs'
-import { Image, View, ScrollView } from 'react-native'
+import { Image, View, ScrollView, NativeAppEventEmitter } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
-import { colorIsLight } from '../../../components/Display'
+import { SnackbarTypes, colorIsLight } from '../../../components/Display'
 import { Display, Text } from '../../../components'
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome'
-import { faHeart } from '@fortawesome/free-solid-svg-icons'
+import { faHeart, faShoppingCart } from '@fortawesome/free-solid-svg-icons'
 import { combineAddress } from '../../../components/Text'
 
 const http = new Http.Client()
@@ -17,7 +17,9 @@ const http = new Http.Client()
 const ViewMerchantPage = (props: PageProps & UserAppData) => {
   const [merchant, setMerchant] = useState<Merchant.FullMerchantData>(undefined),
     [isScrolling, setIsScrolling] = useState(false),
-    { uid } = props.route.params as { uid: string }
+    { uid } = props.route.params as { uid: string },
+    navigation = useNavigation(),
+    [addToSnackbar, snackbarContent] = Display.useSnackbar()
 
   useFocusEffect(
     useCallback(
@@ -176,7 +178,7 @@ const ViewMerchantPage = (props: PageProps & UserAppData) => {
             }
           }
         >
-          <View
+          {/*<View
             style={
               { paddingHorizontal: 16 }
             }
@@ -248,6 +250,20 @@ const ViewMerchantPage = (props: PageProps & UserAppData) => {
                 disabled={isScrolling}
               />
             </ScrollView>
+          </View>*/}
+
+          <View
+            style={
+              { paddingHorizontal: 16 }
+            }
+          >
+            <Text.Label
+              color={Constants.Colors.Text.tertiary}
+              weight='bold'
+              size={20}
+            >
+              All Available Products
+            </Text.Label>
           </View>
 
           <View
@@ -274,67 +290,138 @@ const ViewMerchantPage = (props: PageProps & UserAppData) => {
                         {
                           display: 'flex',
                           flexDirection: 'row',
-                          gap: 8
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
                         }
                       }
                       key={idx}
                     >
-                      <Image
-                        source={
-                          { uri: item.image ?? '' }
-                        }
-                        style={
-                          {
-                            width: 64,
-                            height: 64,
-                            resizeMode: 'contain'
-                          }
-                        }
-                      />
-
-                      { /* Divider */ }
-                      <View 
-                        style={
-                          {
-                            width: 1,
-                            height: '100%',
-                            backgroundColor: 'lightgrey'
-                          }
-                        }
-                      />
-
                       <View
                         style={
                           {
                             display: 'flex',
-                            flexDirection: 'column',
-                            justifyContent: 'center'
+                            flexDirection: 'row',
+                            gap: 8,
+                            flexBasis: '60%'
                           }
                         }
                       >
+                        <Image
+                          source={
+                            { uri: item.image ?? '' }
+                          }
+                          style={
+                            {
+                              width: 64,
+                              height: 64,
+                              resizeMode: 'contain'
+                            }
+                          }
+                        />
+
+                        { /* Divider */ }
+                        <View 
+                          style={
+                            {
+                              width: 1,
+                              height: '100%',
+                              backgroundColor: 'lightgrey'
+                            }
+                          }
+                        />
+
                         <View
                           style={
                             {
                               display: 'flex',
-                              flexDirection: 'column'
+                              flexDirection: 'column',
+                              justifyContent: 'center'
                             }
                           }
                         >
-                          <Text.Label
-                            weight='bold'
-                            color={Constants.Colors.Text.tertiary}
-                            size={18}
+                          <View
+                            style={
+                              {
+                                display: 'flex',
+                                flexDirection: 'column'
+                              }
+                            }
                           >
-                            {item.name}
+                            <Text.Label
+                              weight='bold'
+                              color={Constants.Colors.Text.tertiary}
+                              size={18}
+                            >
+                              {item.name}
+                            </Text.Label>
+                          </View>
+                          
+                          <Text.Label
+                            color={Constants.Colors.Text.green}
+                            font='monospace'
+                            size={12}
+                          >
+                            ₱{(item.price + (item.price * .15)).toFixed(2)}
+                          </Text.Label>
+
+                          <Text.Label
+                            color={Constants.Colors.All.lightBlue}
+                            size={12}
+                          >
+                            {(item.eta ?? 0).toString()} minutes
+                          </Text.Label>
+
+                          <Text.Label
+                            color={
+                              item.available ?
+                                Constants.Colors.Text.green :
+                                Constants.Colors.Text.danger
+                            }
+                            size={12}
+                          >
+                            {
+                              item.available ?
+                                'Available' :
+                                'Unavailable'
+                            }
                           </Text.Label>
                         </View>
-                        
-                        <Text.Label
-                          weight='bold'
-                          color={Constants.Colors.Text.green}
-                        >
-                          ₱{item.price.toFixed(2)}
-                        </Text.Label>
+                      </View>
+
+                      <View
+                        style={
+                          { flexBasis: '15%' }
+                        }
+                      >
+                        <Display.Button
+                          icon={faShoppingCart}
+                          iconSize={16}
+                          paddingHorizontal={16}
+                          paddingVertical={16}
+                          bg={
+                            item.available ? (
+                              props.cart.has(item.uid) ?
+                                Constants.Colors.Text.danger :
+                                Constants.Colors.Text.green
+                            ) : Constants.Colors.Text.secondary
+                          }
+                          onPress={
+                            () => {
+                              if (!item.available)
+                                return addToSnackbar(item.name + ' is currently unavailable.', SnackbarTypes.INFO)
+
+                              if (props.cart.has(item.uid)) {
+                                props.cart.delete(item.uid)
+                                addToSnackbar(item.name + ' removed from cart.', SnackbarTypes.DANGER)
+                              } else {
+                                props.cart.set(item.uid, { quantity: 1 })
+                                addToSnackbar(item.name + ' added to cart.', SnackbarTypes.SUCCESS)
+                              }
+
+                              NativeAppEventEmitter.emit('set-cart', props.cart)
+                            }
+                          }
+                        />
                       </View>
                     </View>
                   )
@@ -352,15 +439,18 @@ const ViewMerchantPage = (props: PageProps & UserAppData) => {
           <Display.Button
             bg={merchant.data.accent ?? Constants.Colors.All.main}
             text={
-              {
-                content: 'Proceed to Checkout',
-                color: colorIsLight(merchant.data.accent) ?
-                  Constants.Colors.Text.tertiary :
-                  Constants.Colors.Text.alt
-              }
+              { content: 'Proceed to Checkout' }
+            }
+            inverted={
+              { color: merchant.data.accent ?? Constants.Colors.All.main }
+            }
+            onPress={
+              () => (navigation.navigate as any)('Checkout')
             }
           />
         </View>
+
+        {snackbarContent}
       </SafeAreaView>
     </>
   ) : null

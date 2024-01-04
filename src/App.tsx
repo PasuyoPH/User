@@ -12,19 +12,27 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import * as Linking from 'expo-linking'
 import { PortalProvider } from '@gorhom/portal'
 import * as Location from 'expo-location'
-import Constants from 'expo-constants'
 import { AppModes, CartData } from 'app-types/src/app'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated'
+import useStateRef from 'react-usestateref'
+import 'react-native-gesture-handler'
+import { Display } from '../components'
 
-Location.setGoogleApiKey(Constants.expoConfig.android.config.googleMaps.apiKey)
+// for icons to import as text
+import { library } from '@fortawesome/fontawesome-svg-core'
+import { fas } from '@fortawesome/free-solid-svg-icons'
+
+library.add(fas)
+
+Location.setGoogleApiKey('AIzaSyAe1O4RsaElYL79mHnPSHRGL_lVCf9uP0M')
 
 const http = new Http.Client(),
   NativeStack = createNativeStackNavigator(),
   BottomTabStack = createBottomTabNavigator()
 
 function App() {
-  const [user, setUser] = useState<Types.App.UserAppData>(
+  const [user, setUser, userRef] = useStateRef<Types.App.UserAppData>(
       {
         token: null,
         appState: Types.App.AppState.LOADING,
@@ -42,6 +50,7 @@ function App() {
         'Wolf Sans': require('../assets/fonts/Wolf-Sans-Regular.ttf')
       }
     ),
+    [addToSnackbar, snackbarContent] = Display.useSnackbar(),
     url = Linking.useURL()
   
   const fetchUserData = async (token: string) => {
@@ -112,7 +121,7 @@ function App() {
         async (token: string) => {
           if (token) await fetchUserData(token)
           else { // logout
-            await AsyncStorage.setItem('token', null)
+            await AsyncStorage.removeItem('token')
             setUser(
               (latestUser) => (
                 {
@@ -145,9 +154,7 @@ function App() {
       NativeAppEventEmitter.addListener(
         'cart-clear',
         () => {
-          const cart = new Map(user.cart)
-          cart.clear()
-
+          const cart = new Map() // make a new map
           setUser(
             (latestUser) => (
               {
@@ -162,7 +169,9 @@ function App() {
       NativeAppEventEmitter.addListener(
         'remove-cart',
         (uid: string) => {
-          const cart = new Map(user.cart),
+          //addToSnackbar('Item removed from cart.', SnackbarTypes.DANGER)
+
+          const cart = new Map(userRef.current.cart),
             data = cart.get(uid)
 
           if (data.quantity <= 1)
@@ -186,8 +195,12 @@ function App() {
       NativeAppEventEmitter.addListener(
         'add-cart',
         (uid: string) => {
-          const cart = new Map(user.cart),
+          //addToSnackbar('Item added to cart.', SnackbarTypes.SUCCESS)
+
+          const cart = new Map(userRef.current.cart),
             data = cart.get(uid)
+
+          console.log('uid:', uid, 'DATA:', data)
 
           data.quantity++
           cart.set(uid, data)
@@ -281,19 +294,22 @@ function App() {
                               <StatusBar
                                 style={page.statusBarColor ?? 'dark'}
                               />
-                                <PortalProvider>
-                                  <Animated.View
-                                    entering={FadeIn}
-                                    exiting={FadeOut}
-                                    style={{ flexGrow: 1 }}
-                                  >
-                                    <page.component
-                                      {...user}
-                                      {...props}
-                                      modifyData={setUser}
-                                    />
-                                  </Animated.View>
-                                </PortalProvider>   
+                              
+                              <PortalProvider>
+                                <Animated.View
+                                  entering={FadeIn}
+                                  exiting={FadeOut}
+                                  style={{ flexGrow: 1 }}
+                                >
+                                  <page.component
+                                    {...user}
+                                    {...props}
+                                    modifyData={setUser}
+                                  />
+
+                                  {snackbarContent}
+                                </Animated.View>
+                              </PortalProvider>   
                             </>
                           )
                         }
@@ -338,19 +354,21 @@ function App() {
                               <StatusBar
                                 style={page.statusBarColor ?? 'dark'}
                               />
-                                <PortalProvider>
-                                  <Animated.View
-                                    entering={FadeIn}
-                                    exiting={FadeOut}
-                                    style={{ flexGrow: 1 }}
-                                  >
-                                    <page.component
-                                      {...user}
-                                      {...props}
-                                      modifyData={setUser}
-                                    />
-                                  </Animated.View>
-                                </PortalProvider>   
+                              <PortalProvider>
+                                <Animated.View
+                                  entering={FadeIn}
+                                  exiting={FadeOut}
+                                  style={{ flexGrow: 1 }}
+                                >
+                                  <page.component
+                                    {...user}
+                                    {...props}
+                                    modifyData={setUser}
+                                  />
+
+                                  {snackbarContent}
+                                </Animated.View>
+                              </PortalProvider>
                             </>
                           )
                         }

@@ -1,5 +1,5 @@
 import { PageProps, UserAppData } from 'app-types/src/app'
-import { NativeAppEventEmitter, View, Image, ScrollView, ActivityIndicator } from 'react-native'
+import { NativeAppEventEmitter, View, Image, ScrollView, ActivityIndicator, BackHandler } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Display, Text } from '../../../components'
 import { Address, App, Constants, Items, Merchant, Orders } from 'app-types'
@@ -32,6 +32,8 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
       for (const item of itemsRef.current) {
         const cartData = user.cart.get(item.uid)
         if (!cartData) continue
+
+        console.log('CART DATA:', cartData)
         
         orderData.push(
           {
@@ -57,6 +59,10 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
       }
 
       return total
+    },
+    onBackPress = () => {
+      (navigation.navigate as any)('Home')
+      return true
     },
     pressContinue = async () => {
       setResult([false, ''])
@@ -93,6 +99,14 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
           }
         )
 
+      if (result.error)
+        setResult(
+          [
+            true,
+            result.message ?? 'Error: Something happened. Please try again.'
+          ]
+        )
+
       if (result.value) { // get merchant
         const merchant = await http.request<Merchant.MerchantData>(
           {
@@ -104,7 +118,6 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
           }
         )
 
-        console.log(result.value, merchant.value)
         if (!merchant.value) return; // should rarely happen
 
         (navigation.navigate as any)(
@@ -187,6 +200,11 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
 
         getItems()
           .catch(console.error)
+
+        BackHandler.addEventListener('hardwareBackPress', onBackPress)
+        return () => {
+          BackHandler.removeEventListener('hardwareBackPress', onBackPress)
+        }
       },
       []
     )
@@ -194,14 +212,17 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
 
   return (
     <SafeAreaView
-      style={
-        {
-          display: 'flex',
-          flexDirection: 'column',
-          flexGrow: 1,
-          gap: 16
-        }
+    style={
+      {
+        display: 'flex',
+        flexDirection: 'column',
+        flexGrow: 1,
+        gap: 16
       }
+    }
+    >
+    <ScrollView
+      
     >
       <View
         style={
@@ -300,11 +321,12 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
         </Text.Label>
       </View>
 
-      <ScrollView
+      <View
         style={
           {
             display: 'flex',
             flexDirection: 'row',
+            flexWrap: 'wrap',
             paddingHorizontal: 28
           }
         }
@@ -326,7 +348,8 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
                         backgroundColor: Constants.Colors.Text.alt,
                         paddingHorizontal: 16,
                         paddingVertical: 8,
-                        borderRadius: 10
+                        borderRadius: 10,
+                        maxWidth: 128 + 32
                       }
                     }
                   >
@@ -369,7 +392,7 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
                           font='monospace'
                           color={Constants.Colors.Text.secondary}
                         >
-                          ₱{item.price.toFixed(2)}
+                          ₱{(item.price + (item.price * .15)).toFixed(2)}
                         </Text.Label>
                       </View>
   
@@ -385,7 +408,7 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
                       >
                         <Display.Button
                           onPress={
-                            () => NativeAppEventEmitter.emit('remove-cart', '1')
+                            () => NativeAppEventEmitter.emit('remove-cart', item.uid)
                           }
                           icon={faMinus}
                           paddingHorizontal={8}
@@ -408,13 +431,13 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
                             color={Constants.Colors.Text.tertiary}
                             size={14}
                           >
-                            {itemInCart.quantity.toLocaleString()}
+                            {itemInCart?.quantity.toLocaleString()}
                           </Text.Label>
                         </View>
   
                         <Display.Button
                           onPress={
-                            () => NativeAppEventEmitter.emit('add-cart', '1')
+                            () => NativeAppEventEmitter.emit('add-cart', item.uid)
                           }
                           icon={faPlus}
                           paddingHorizontal={8}
@@ -435,7 +458,7 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
             )
           ) : null
         }
-      </ScrollView>
+      </View>
 
       <View
         style={
@@ -480,7 +503,7 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
                   color={Constants.Colors.Text.green}
                   size={14}
                 >
-                  ₱{totalPrice.toFixed(2)}
+                  ₱{((totalPrice * .15) + totalPrice).toFixed(2)}
                 </Text.Label>
               ) : (
                 <ActivityIndicator />
@@ -536,6 +559,7 @@ const CheckoutPage = (user: UserAppData & PageProps) => {
           </View>
         </View>
       </View>
+    </ScrollView>
     </SafeAreaView>
   )
 }

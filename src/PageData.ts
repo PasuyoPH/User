@@ -18,6 +18,11 @@ import DeliveryHomePage from './pages/delivery/Home'
 import NewDeliveryPage from './pages/delivery/NewDelivery'
 import DeliveryCheckoutPage from './pages/delivery/Checkout'
 import ConfirmDelivery from './pages/delivery/ConfirmDelivery'
+import OrdersPage from './pages/main/Orders'
+import ViewJobPage from './pages/main/ViewJob'
+import RiderPositionPage from './pages/main/RiderPosition'
+import RegisterPage from './pages/auth/Register'
+import MerchantTypeFilterPage from './pages/main/MerchantTypeFilter'
 
 const LoginPageData: App.PageItem[] = [
     {
@@ -27,6 +32,10 @@ const LoginPageData: App.PageItem[] = [
     {
       component: LoginPage,
       name: 'Login'
+    },
+    {
+      component: RegisterPage,
+      name: 'Register'
     }
   ],
   DeliverPageData: App.PageItem[] = [
@@ -35,6 +44,14 @@ const LoginPageData: App.PageItem[] = [
       name: 'Home',
       hideHeader: true,
       statusBarColor: 'dark'
+    },
+
+    {
+      
+      component: OrdersPage,
+      name: 'Orders',
+      hideHeader: true,
+      statusBarColor: 'dark',
     },
 
     {
@@ -91,6 +108,20 @@ const LoginPageData: App.PageItem[] = [
       name: 'Processed',
       hideHeader: true,
       statusBarColor: 'dark'
+    },
+
+    {
+      component: ViewJobPage,
+      name: 'ViewJob',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: RiderPositionPage,
+      name: 'RiderPosition',
+      hideHeader: true,
+      statusBarColor: 'dark'
     }
   ],
   MainPageData: App.PageItem[] = [
@@ -104,6 +135,20 @@ const LoginPageData: App.PageItem[] = [
         to: 'Home',
         label: 'Home'
       }
+    },
+
+    {
+      component: MerchantTypeFilterPage,
+      name: 'MerchantTypeFilter',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: OrdersPage,
+      name: 'Orders',
+      hideHeader: true,
+      statusBarColor: 'dark',
     },
 
     {
@@ -197,6 +242,20 @@ const LoginPageData: App.PageItem[] = [
     {
       component: ProcessedPage,
       name: 'Processed',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: ViewJobPage,
+      name: 'ViewJob',
+      hideHeader: true,
+      statusBarColor: 'dark'
+    },
+
+    {
+      component: RiderPositionPage,
+      name: 'RiderPosition',
       hideHeader: true,
       statusBarColor: 'dark'
     }

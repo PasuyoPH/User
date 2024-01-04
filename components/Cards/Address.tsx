@@ -154,13 +154,13 @@ const AddressCard = (props: AddressCardProps) => {
               }
             }
           >
-            <Display.Button
+            {/*<Display.Button
               icon={faPenToSquare}
               bg={Constants.Colors.All.main}
               paddingHorizontal={8}
               paddingVertical={8}
               text={{ size: 10 }}
-            />
+          />*/}
 
             <Display.Button
               icon={faTrash}

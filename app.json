@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "user",
-    "slug": "user",
-    "version": "1.0.0",
+    "name": "Pasuyo",
+    "slug": "pasuyo-app",
+    "version": "3.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
@@ -14,16 +14,10 @@
     "assetBundlePatterns": [
       "**/*"
     ],
-    "scheme": "pasuyo",
     "ios": {
       "supportsTablet": true
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "useNextNotificationsApi": true,
       "config": {
         "googleMaps": {
           "apiKey": "AIzaSyAe1O4RsaElYL79mHnPSHRGL_lVCf9uP0M"
@@ -32,17 +26,14 @@
       "permissions": [
         "android.permission.ACCESS_COARSE_LOCATION",
         "android.permission.ACCESS_FINE_LOCATION",
-        "android.permission.FOREGROUND_SERVICE",
-        "android.permission.ACCESS_BACKGROUND_LOCATION"
+        "android.permission.FOREGROUND_SERVICE"
       ],
-      "package": "com.pasuyoph.user"
+      "package": "com.pasuyoph.app",
+      "versionCode": 25
     },
     "plugins": [
       [
-        "expo-location",
-        {
-          "isAndroidBackgroundLocationEnabled": true
-        }
+        "expo-location"
       ]
     ],
     "web": {
@@ -50,7 +41,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "b3720b45-da69-40ad-b9ec-586f70f02c91"
+        "projectId": "b02a87e3-23cc-4a3d-897c-9a9deff51b81"
       }
     }
   }

@@ -2,6 +2,8 @@ import { Address, Constants, Deliveries } from 'app-types'
 import { View } from 'react-native'
 import * as Text from '../Text'
 
+import * as Time from '../Time'
+
 interface ConfirmDeliveryCardProps {
   delivery: Deliveries.Data
   pickup: Address.AddressData
@@ -196,7 +198,7 @@ const ConfirmDeliveryCard = (props: ConfirmDeliveryCardProps) => {
             size={14}
             color={Constants.Colors.Text.tertiary}
           >
-            {props.delivery.eta.toFixed(2)} seconds
+            {Time.secondsToTime(props.delivery.eta)}
           </Text.Label>
         </View>
 
