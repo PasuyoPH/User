@@ -9,7 +9,6 @@ import { UserAppData } from 'app-types/src/app'
 import React, { useCallback, useState } from 'react'
 import { useFocusEffect, useNavigation } from '@react-navigation/native'
 import { Http } from 'app-structs'
-import Checkbox from 'expo-checkbox'
 
 const http = new Http.Client()
 

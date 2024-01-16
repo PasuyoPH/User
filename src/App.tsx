@@ -100,6 +100,7 @@ function App() {
         if (user.token && user.data) return
 
         const token = await AsyncStorage.getItem('token') ?? undefined
+        console.log(token)
         if (!token)
           return setUser(
             (latestUser) => (

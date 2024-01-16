@@ -4,7 +4,7 @@ import { App, Constants, Items } from 'app-types'
 import { useCallback, useState } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { Display, Text } from '../../../components'
-import { ActivityIndicator, Image, Pressable, ScrollView, View } from 'react-native'
+import { ActivityIndicator, Image, ScrollView, View } from 'react-native'
 
 const http = new Http.Client()
 

@@ -9,7 +9,6 @@ import { Shadow } from 'react-native-shadow-2'
 import Button from './Button'
 import { faAngleLeft } from '@fortawesome/free-solid-svg-icons'
 import { GooglePlacesAutocomplete } from 'react-native-google-places-autocomplete'
-import ExpoConstants from 'expo-constants'
 
 interface MapHeaderProps {
   onBack?: () => void
